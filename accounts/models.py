@@ -4,7 +4,9 @@ from django.db import models
 # Create your models here.
 
 class User(AbstractUser):
+    # This identifies if the user can create quizzes (Teacher) or just take them (Student)
     is_teacher = models.BooleanField(default=False)
+    bio = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return self.username
+        return f"{self.username} ({'Teacher' if self.is_teacher else 'Student'})"
