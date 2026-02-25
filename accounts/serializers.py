@@ -12,7 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
         return user
     
 class RegisterSerializer(serializers.ModelSerializer):
-    # We explicitly define password to make it write-only for security
+    # Define password to make it write-only for security so it never gets sent back in a response
     password = serializers.CharField(write_only=True)
 
     class Meta:
