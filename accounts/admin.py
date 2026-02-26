@@ -5,7 +5,7 @@ from .models import User
 # Register your models here.
 
 class CustomUserAdmin(UserAdmin):
-    # Add our custom fields to the 'User' edit page in admin
+    # This ensures 'is_teacher' shows up when you edit a user in Admin
     fieldsets = UserAdmin.fieldsets + (
         (None, {'fields': ('is_teacher',)}),
     )

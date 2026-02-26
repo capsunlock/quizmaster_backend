@@ -35,6 +35,7 @@ INSTALLED_APPS = [
 
     # My internal apps
     'accounts',
+    'quizzes',
 ]
 
 MIDDLEWARE = [
