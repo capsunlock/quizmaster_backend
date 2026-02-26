@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import generics, permissions
-from .models import Quiz
-from .serializers import QuizSerializer, StudentQuizSerializer
+from .models import Quiz, Attempt 
+from .serializers import QuizSerializer, StudentQuizSerializer, AttemptSerializer 
 
 # Create your views here.
 
@@ -24,3 +24,12 @@ class QuizListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         # Automatically set the creator to the logged-in teacher
         serializer.save(creator=self.request.user)
+
+class AttemptCreateView(generics.CreateAPIView):
+    queryset = Attempt.objects.all()
+    serializer_class = AttemptSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # This ensures the score is calculated for the logged-in student
+        serializer.save(student=self.request.user)

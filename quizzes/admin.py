@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Quiz, Question, Choice
+from .models import Quiz, Question, Choice, Attempt, AttemptAnswer
 
 # Register your models here.
 
@@ -14,3 +14,5 @@ class QuestionAdmin(admin.ModelAdmin):
 admin.site.register(Quiz)
 admin.site.register(Question, QuestionAdmin)
 admin.site.register(Choice)
+admin.site.register(Attempt)
+admin.site.register(AttemptAnswer)

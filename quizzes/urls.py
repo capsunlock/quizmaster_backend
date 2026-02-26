@@ -1,7 +1,9 @@
 from django.urls import path
-from .views import QuizListCreateView
+from .views import QuizListCreateView, AttemptCreateView 
 
 urlpatterns = [
-    # This handles both GET (listing) and POST (creating)
     path('', QuizListCreateView.as_view(), name='quiz-list-create'),
+    
+    # For submitting answers
+    path('submit/', AttemptCreateView.as_view(), name='quiz-submit'),
 ]

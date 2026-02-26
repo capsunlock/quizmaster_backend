@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Quiz, Question, Choice
+from .models import Quiz, Question, Choice, Attempt, AttemptAnswer
 
 # --- TEACHER SERIALIZERS (Full Access & Writable) ---
 
@@ -69,3 +69,43 @@ class StudentQuizSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
         fields = ['id', 'title', 'description', 'questions']
+
+
+class AttemptAnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AttemptAnswer
+        fields = ['question', 'selected_choice']
+
+class AttemptSerializer(serializers.ModelSerializer):
+    answers = AttemptAnswerSerializer(many=True)
+
+    class Meta:
+        model = Attempt
+        fields = ['id', 'quiz', 'answers', 'score', 'completed_at']
+        read_only_fields = ['score', 'completed_at']
+
+    def create(self, validated_data):
+        answers_data = validated_data.pop('answers')
+        quiz = validated_data['quiz']
+        student = self.context['request'].user
+        
+        # 1. Create the initial Attempt
+        attempt = Attempt.objects.create(student=student, quiz=quiz)
+        
+        correct_count = 0
+        total_questions = quiz.questions.count()
+
+        # 2. Process each answer and check if it's right
+        for ans in answers_data:
+            choice = ans['selected_choice']
+            AttemptAnswer.objects.create(attempt=attempt, **ans)
+            
+            if choice.is_correct:
+                correct_count += 1
+
+        # 3. Calculate score (percentage)
+        if total_questions > 0:
+            attempt.score = (correct_count / total_questions) * 100
+        
+        attempt.save()
+        return attempt
