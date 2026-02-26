@@ -21,5 +21,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # All accounts URLs will start with /api/auth/
-    path('api/auth/', include('accounts.urls'))
+    path('api/auth/', include('accounts.urls')),
+
+    # New route for quizzes
+    path('api/quizzes/', include('quizzes.urls')),
 ]

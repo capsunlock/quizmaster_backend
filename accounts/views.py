@@ -3,6 +3,8 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny 
 from .serializers import RegisterSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
 # Create your views here.
@@ -28,3 +30,21 @@ class RegisterView(generics.CreateAPIView):
             }, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        # Add custom data to the response
+        data['is_teacher'] = self.user.is_teacher
+        
+        # Logic: If NOT a teacher, tell them to go to quizzes
+        if not self.user.is_teacher:
+            data['next_url'] = '/api/quizzes/'
+        else:
+            data['next_url'] = '/admin/' # Teachers might go to admin
+            
+        return data
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
