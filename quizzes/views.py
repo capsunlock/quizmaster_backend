@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import generics, permissions
 from .models import Quiz, Attempt 
-from .serializers import QuizSerializer, StudentQuizSerializer, AttemptSerializer 
+from .serializers import QuizSerializer, StudentQuizSerializer, AttemptSerializer, LeaderboardSerializer 
 
 # Create your views here.
 
@@ -33,3 +33,13 @@ class AttemptCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         # This ensures the score is calculated for the logged-in student
         serializer.save(student=self.request.user)
+
+class LeaderboardView(generics.ListAPIView):
+    serializer_class = LeaderboardSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Grab the quiz_id from the URL (e.g., /api/quizzes/1/leaderboard/)
+        quiz_id = self.kwargs['quiz_id']
+        # Order by Score (Descending) and then by Date (Ascending)
+        return Attempt.objects.filter(quiz_id=quiz_id).order_by('-score', 'completed_at')

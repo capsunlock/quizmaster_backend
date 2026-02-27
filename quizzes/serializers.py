@@ -109,3 +109,10 @@ class AttemptSerializer(serializers.ModelSerializer):
         
         attempt.save()
         return attempt
+    
+class LeaderboardSerializer(serializers.ModelSerializer):
+    student_name = serializers.ReadOnlyField(source='student.username')
+
+    class Meta:
+        model = Attempt
+        fields = ['student_name', 'score', 'completed_at']
