@@ -1,7 +1,8 @@
 from django.shortcuts import render
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, filters
 from .models import Quiz, Attempt 
 from .serializers import QuizSerializer, StudentQuizSerializer, AttemptSerializer, LeaderboardSerializer 
+from django_filters.rest_framework import DjangoFilterBackend
 
 # Create your views here.
 
@@ -13,6 +14,12 @@ class IsTeacher(permissions.BasePermission):
 class QuizListCreateView(generics.ListCreateAPIView): 
     # Teachers can Create, everyone (authenticated) can List
     queryset = Quiz.objects.all()
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['creator__username'] # Filter by teacher name
+    search_fields = ['title', 'description'] # Search by words in title/desc
+    ordering_fields = ['created_at'] # Sort by date
+    ordering = ['-created_at'] # Default to newest first
     
     def get_serializer_class(self):
         # If the user is a teacher, show them everything (including answers)
