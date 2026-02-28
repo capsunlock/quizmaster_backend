@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Your Results{% endblock %}
+
+{% block content %}
+    <div style="text-align: center;">
+        <h1>Exam Completed!</h1>
+        <h2 style="font-size: 4rem; color: var(--primary);">{{ request.GET.score }}%</h2>
+        <p>Excellent effort! Your score has been recorded.</p>
+        <a href="{% url 'leaderboard' %}" class="btn btn-gold">🏆 View Leaderboard</a>
+        <a href="{% url 'quiz-list' %}" class="btn btn-primary" style="margin-top:10px;">Back to Quizzes</a>
+    </div>
+{% endblock %}

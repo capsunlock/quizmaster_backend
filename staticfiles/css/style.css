@@ -1,0 +1,13 @@
+:root { --primary: #007bff; --success: #28a745; --gold: #ffc107; --dark: #212529; }
+body { font-family: 'Inter', system-ui, sans-serif; background-color: #f8f9fa; margin: 0; }
+.navbar { background: var(--dark); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; color: white; }
+.navbar a { color: white; text-decoration: none; margin-left: 15px; font-weight: 500; }
+.container { max-width: 800px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.question-card { border-left: 4px solid var(--primary); background: #fdfdfd; padding: 20px; margin-bottom: 20px; border-radius: 0 8px 8px 0; }
+.choice-label { display: block; padding: 12px; border: 1px solid #dee2e6; margin: 8px 0; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+.choice-label:hover { background: #e9ecef; }
+.btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-gold { background: var(--gold); color: black; width: auto; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }

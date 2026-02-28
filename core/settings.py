@@ -1,5 +1,6 @@
 from pathlib import Path
 from datetime import timedelta
+import os
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -56,10 +57,11 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -118,6 +120,14 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# The folder where collectstatic will gather all files
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Look for a 'static' folder in each app - Extra places where you store static files (your source folder)
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
 AUTH_USER_MODEL = 'accounts.User'
 
 
@@ -138,3 +148,8 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+CORS_ALLOW_ALL_ORIGINS = True  # Only for development btw
+
+LOGIN_REDIRECT_URL = 'login-success'
+LOGOUT_REDIRECT_URL = 'login' # After logout, send them back to the landing page

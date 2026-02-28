@@ -1,0 +1,33 @@
+{% extends "base.html" %}  {% load static %}
+{% block title %}Create New Quiz{% endblock %}
+
+{% block content %}
+<div class="content-area">
+    <div class="header-flex">
+        <h2>Create a New Quiz</h2>
+        <button type="button" id="add-q" class="btn btn-gold">+ Add Question</button>
+    </div>
+
+    <form id="teacher-form">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="title">Quiz Title</label>
+            <input type="text" id="title" class="q-text" placeholder="e.g., Introduction to Python" required>
+        </div>
+
+        <div class="form-group">
+            <label for="desc">Description</label>
+            <textarea id="desc" class="q-text" rows="2" placeholder="Briefly describe what this quiz covers..."></textarea>
+        </div>
+
+        <div id="questions-area">
+            </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top: 20px;">Save and Publish Quiz</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/teacher.js' %}"></script>
+{% endblock %}

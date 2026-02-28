@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Available Quizzes{% endblock %}
+
+{% block content %}
+<div class="content-area">
+    <h1>Available Quizzes</h1>
+    {% for quiz in quizzes %}
+        <div class="question-card">
+            <h3>{{ quiz.title }}</h3>
+            <p>{{ quiz.description }}</p>
+            <a href="{% url 'quiz-detail' quiz.id %}" class="btn btn-primary" style="display:inline-block; width:auto;">Take Quiz</a>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

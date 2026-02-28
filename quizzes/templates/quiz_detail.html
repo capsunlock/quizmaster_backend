@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ quiz.title }}{% endblock %}
+
+
+{% block content %}
+<div class="content-area"> 
+    <h1>{{ quiz.title }}</h1>
+    <input type="hidden" id="quiz-id" value="{{ quiz.id }}">
+    <form id="quiz-form">
+        {% csrf_token %}
+        {% for question in quiz.questions.all %}
+            <div class="question-card">
+                <p><strong>{{ forloop.counter }}. {{ question.text }}</strong></p>
+                {% for choice in question.choices.all %}
+                    <label class="choice-label">
+                        <input type="radio" name="q-{{ question.id }}" value="{{ choice.id }}" required>
+                        {{ choice.text }}
+                    </label>
+                {% endfor %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Submit Exam</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/quiz.js' %}"></script>
+{% endblock %}
