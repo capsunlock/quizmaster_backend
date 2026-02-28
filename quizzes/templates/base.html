@@ -6,19 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QuizMaster - {% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
 
- <nav class="navbar">
-    <a href="{% url 'login-success' %}" style="font-size: 1.5rem; font-weight: bold;">QuizMaster</a>
+<nav class="navbar">
+    <a href="{% if user.is_authenticated %}{% url 'login-success' %}{% else %}{% url 'login' %}{% endif %}" 
+       style="font-size: 1.5rem; font-weight: bold; text-decoration: none; color: white;">
+       QuizMaster
+    </a>
+    
     <div>
         <a href="{% url 'leaderboard' %}">Leaderboard</a>
 
-        {% if user.is_teacher %}
-            <a href="{% url 'create-quiz' %}" style="color: var(--gold);">+ Create Quiz</a>
-        {% endif %}
-
         {% if user.is_authenticated %}
+            {% if user.is_teacher %}
+                <a href="{% url 'create-quiz' %}" style="color: var(--gold); margin-left: 15px;">+ Create Quiz</a>
+            {% endif %}
+
             <form action="{% url 'logout' %}" method="post" style="display: inline; margin-left: 15px;">
                 {% csrf_token %}
                 <button type="submit" style="background: none; border: none; color: white; cursor: pointer; font-family: inherit; font-size: inherit; padding: 0; font-weight: 500;">
@@ -26,16 +31,16 @@
                 </button>
             </form>
         {% else %}
-            <a href="{% url 'login' %}">Login</a>
+            <a href="{% url 'login' %}" style="margin-left: 15px;">Login</a>
         {% endif %}
     </div>
 </nav>
 
-    <div class="container">
-        {% block content %}
-        {% endblock %}
-    </div>
+<div class="container">
+    {% block content %}
+    {% endblock %}
+</div>
 
-    {% block extra_js %}{% endblock %}
+{% block extra_js %}{% endblock %}
 </body>
 </html>
