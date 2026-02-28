@@ -1,1 +1,33 @@
-myenv
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+myenv/
+pip-log.txt
+pip-delete-this-directory.txt
+.venv
+.env
+.venv
+bin/
+lib/
+include/
+share/
+
+# Django
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# OS/IDEs
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.bak
+Thumbs.db
