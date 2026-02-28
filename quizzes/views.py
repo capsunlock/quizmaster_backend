@@ -1,16 +1,19 @@
+import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from rest_framework import generics, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone 
 from datetime import timedelta    
-from .models import Quiz, Attempt 
+from .models import Quiz, Attempt, AttemptAnswer, Choice, Question
 from .serializers import (
     QuizSerializer, 
     StudentQuizSerializer, 
     AttemptSerializer, 
     LeaderboardSerializer
 )
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_protect
 
 # --- CUSTOM PERMISSION ---
 class IsTeacher(permissions.BasePermission):
@@ -80,12 +83,12 @@ def take_quiz(request, quiz_id):
     questions = quiz.questions.all().prefetch_related('choices')
     
     if request.method == 'POST':
-        # 1. Create the Attempt
+        # Create the Attempt
         attempt = Attempt.objects.create(student=request.user, quiz=quiz)
         correct_count = 0
         total_questions = questions.count()
 
-        # 2. Loop through questions to process answers
+        # Loop through questions to process answers
         for question in questions:
             # The 'name' in our HTML radio buttons will be 'question_<id>'
             choice_id = request.POST.get(f'question_{question.id}')
@@ -93,7 +96,7 @@ def take_quiz(request, quiz_id):
             if choice_id:
                 selected_choice = get_object_or_404(Choice, id=choice_id)
                 
-                # 3. Save the individual answer
+                # Save the individual answer
                 AttemptAnswer.objects.create(
                     attempt=attempt,
                     question=question,
@@ -104,7 +107,7 @@ def take_quiz(request, quiz_id):
                 if selected_choice.is_correct:
                     correct_count += 1
 
-        # 4. Calculate and save the final score
+        # Calculate and save the final score
         if total_questions > 0:
             attempt.score = (correct_count / total_questions) * 100
             attempt.save()
@@ -127,6 +130,63 @@ def login_success_view(request):
     else:
         return redirect('quiz-list')
     
+def quiz_results_view(request, attempt_id):
+    # Fetch the specific attempt, ensuring it belongs to the logged-in student
+    attempt = get_object_or_404(Attempt, id=attempt_id, student=request.user)
+    
+    return render(request, 'quizzes/quiz_results.html', {
+        'attempt': attempt
+    })
+    
+@csrf_protect
+def api_submit_quiz(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            quiz_id = data.get('quiz')
+            answers_data = data.get('answers')
+            
+            quiz = get_object_or_404(Quiz, id=quiz_id)
+            
+            # 1. Create the Attempt record
+            attempt = Attempt.objects.create(
+                student=request.user,
+                quiz=quiz
+            )
+            
+            correct_count = 0
+            questions = quiz.questions.all()
+            total_questions = questions.count()
+
+            # 2. Save each answer and track score
+            for item in answers_data:
+                question = get_object_or_404(Question, id=item['question'])
+                selected_choice = get_object_or_404(Choice, id=item['selected_choice'])
+                
+                AttemptAnswer.objects.create(
+                    attempt=attempt,
+                    question=question,
+                    selected_choice=selected_choice
+                )
+                
+                if selected_choice.is_correct:
+                    correct_count += 1
+
+            # 3. Finalize score
+            score = (correct_count / total_questions) * 100 if total_questions > 0 else 0
+            attempt.score = round(score, 2) # Rounding to 2 decimal places looks better
+            attempt.save()
+
+            return JsonResponse({
+                'score': attempt.score,
+                'attempt_id': attempt.id
+            })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"DEBUG ERROR: {e}")
+            return JsonResponse({'error': str(e)}, status=400)
+
 @user_passes_test(is_teacher_check, login_url='quiz-list', redirect_field_name=None)
 def create_quiz_view(request):
     return render(request, 'create_quiz.html')
@@ -136,4 +196,4 @@ def leaderboard_view(request):
     return render(request, 'leaderboard.html', {'attempts': attempts})
 
 def result_view(request):
-    return render(request, 'result.html')
+    return render(request, 'quizzes/quiz_results.html')

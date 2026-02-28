@@ -1,11 +1,12 @@
 document.getElementById('quiz-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const submitBtn = e.target.querySelector('button[type="submit"]');
     const formData = new FormData(e.target);
     const answers = [];
     const questionBlocks = document.querySelectorAll('.question-card');
     
-    // 1. Gather the answers from the radio buttons
+    // Gather the answers from the radio buttons
     for (let [key, value] of formData.entries()) {
         if (key.startsWith('q-')) {
             answers.push({
@@ -15,13 +16,13 @@ document.getElementById('quiz-form').addEventListener('submit', async (e) => {
         }
     }
 
-    // 2. Validation: Ensure every question has been answered
+    // Validation: Ensure every question has been answered
     if (answers.length < questionBlocks.length) {
         alert("Please answer all questions before submitting.");
         return;
     }
 
-    // 3. Get the Quiz ID from the hidden input field
+    // Get the Quiz ID from the hidden input field
     const quizIdElement = document.getElementById('quiz-id');
     if (!quizIdElement) {
         console.error("Error: Missing hidden input field with id='quiz-id'");
@@ -29,13 +30,17 @@ document.getElementById('quiz-form').addEventListener('submit', async (e) => {
     }
     const quizId = quizIdElement.value;
 
+    // Visual Feedback: Disable button while sending
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Submitting...";
+
     try {
-        // 4. Send the data to the API
+        // Send the data to the API
+        // NOTE: Ensure your urls.py has a path for 'quizzes/api/submit/'
         const response = await fetch('/quizzes/api/submit/', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                // This grabs the CSRF token from the form for Django security
                 'X-CSRFToken': formData.get('csrfmiddlewaretoken') 
             },
             body: JSON.stringify({ 
@@ -46,15 +51,21 @@ document.getElementById('quiz-form').addEventListener('submit', async (e) => {
 
         if (response.ok) {
             const data = await response.json();
-            // 5. Redirect to the results page with the score as a URL parameter
-            window.location.href = `/results/?score=${data.score}`;
+    
+            // Check if we actually got an ID back
+            if (data.attempt_id) {
+            // Option A: Go to the detailed results page
+             window.location.href = `/quizzes/results/${data.attempt_id}/`;
         } else {
-            const errorData = await response.json();
-            console.error("Submission failed:", errorData);
-            alert("There was an error submitting your quiz. Please try again.");
-        }
+        // Option B: Emergency Backup (If ID is missing, just go to the leaderboard)
+        console.error("ID was missing, redirecting to leaderboard instead.");
+        window.location.href = `/quizzes/leaderboard/`;
+    }
+}
     } catch (error) {
         console.error("Network error:", error);
         alert("A network error occurred. Please check your connection.");
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Submit Exam";
     }
 });

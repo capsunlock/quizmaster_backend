@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Results: {{ attempt.quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="content-area">
+    <div class="results-header">
+        <h1>Quiz Results</h1>
+        <p class="quiz-title">{{ attempt.quiz.title }}</p>
+        <div class="score-container">
+            <span class="score-label">Final Score</span>
+            <div class="score-value {% if attempt.score >= 70 %}pass{% else %}fail{% endif %}">
+                {{ attempt.score|floatformat:0 }}%
+            </div>
+        </div>
+    </div>
+
+    <a href="{% url 'quiz-list' %}" class="btn btn-primary">Back to Quizzes</a>
+
+    <hr>
+
+    <div class="answers-review">
+        <h3>Review Your Answers</h3>
+        
+        {% for ans in attempt.answers.all %}
+            <div class="answer-card {% if ans.selected_choice.is_correct %}is-correct{% else %}is-wrong{% endif %}">
+                <div class="card-status">
+                    {% if ans.selected_choice.is_correct %}
+                        <span class="status-icon">✓ Correct</span>
+                    {% else %}
+                        <span class="status-icon">✗ Incorrect</span>
+                    {% endif %}
+                </div>
+
+                <p class="question-text"><strong>Q{{ forloop.counter }}:</strong> {{ ans.question.text }}</p>
+                
+                <p class="user-choice">Your Answer: <span>{{ ans.selected_choice.text }}</span></p>
+
+                {% if not ans.selected_choice.is_correct %}
+                    <p class="correct-answer-hint">
+                        Correct Answer: 
+                        <strong>
+                            {% for choice in ans.question.choices.all %}
+                                {% if choice.is_correct %}{{ choice.text }}{% endif %}
+                            {% endfor %}
+                        </strong>
+                    </p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="actions">
+        <a href="{% url 'quiz-list' %}" class="btn btn-primary">Back to Quizzes</a>
+    </div>
+</div>
+
+<style>
+    /* Results Page Styling */
+    .results-header { text-align: center; margin-bottom: 30px; }
+    .quiz-title { color: #666; font-size: 1.2rem; }
+
+    .score-container { margin-top: 20px; }
+    .score-label { display: block; font-size: 0.9rem; color: #888; text-transform: uppercase; }
+    .score-value { font-size: 3.5rem; font-weight: 800; }
+    
+    .pass { color: #28a745; }
+    .fail { color: #dc3545; }
+
+    .answers-review { margin-top: 40px; }
+    
+    .answer-card {
+        background: #fff;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 8px solid #ddd;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    /* Green left border for correct */
+    .answer-card.is-correct { border-left-color: #28a745; background-color: #f8fff9; }
+    
+    /* Red left border for incorrect */
+    .answer-card.is-wrong { border-left-color: #dc3545; background-color: #fff8f8; }
+
+    .status-icon { font-weight: bold; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 10px; display: block; }
+    .is-correct .status-icon { color: #28a745; }
+    .is-wrong .status-icon { color: #dc3545; }
+
+    .question-text { font-size: 1.1rem; margin-bottom: 10px; }
+    .user-choice span { font-weight: 600; }
+    
+    .correct-answer-hint {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed #ddd;
+        color: #28a745;
+        font-size: 0.95rem;
+    }
+
+    .actions { margin-top: 30px; text-align: center; }
+</style>
+{% endblock %}
