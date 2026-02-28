@@ -2,7 +2,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from rest_framework import generics, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
-
+from django.utils import timezone 
+from datetime import timedelta    
 from .models import Quiz, Attempt 
 from .serializers import (
     QuizSerializer, 
@@ -60,15 +61,64 @@ def is_teacher_check(user):
     return user.is_authenticated and user.is_teacher
 
 def quiz_list_view(request):
-    quizzes = Quiz.objects.all()
-    return render(request, 'quiz_list.html', {'quizzes': quizzes})
+    quizzes = Quiz.objects.all().order_by('-created_at')
+    recent_cutoff = timezone.now() - timedelta(hours=24)
+    
+    return render(request, 'quiz_list.html', { 
+        'quizzes': quizzes,
+        'recent_cutoff': recent_cutoff
+    })
 
 def quiz_detail_view(request, pk):
     quiz = get_object_or_404(Quiz, pk=pk)
     return render(request, 'quiz_detail.html', {'quiz': quiz})
 
+
+def take_quiz(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    # We use prefetch_related to get all questions and choices in one go (faster)
+    questions = quiz.questions.all().prefetch_related('choices')
+    
+    if request.method == 'POST':
+        # 1. Create the Attempt
+        attempt = Attempt.objects.create(student=request.user, quiz=quiz)
+        correct_count = 0
+        total_questions = questions.count()
+
+        # 2. Loop through questions to process answers
+        for question in questions:
+            # The 'name' in our HTML radio buttons will be 'question_<id>'
+            choice_id = request.POST.get(f'question_{question.id}')
+            
+            if choice_id:
+                selected_choice = get_object_or_404(Choice, id=choice_id)
+                
+                # 3. Save the individual answer
+                AttemptAnswer.objects.create(
+                    attempt=attempt,
+                    question=question,
+                    selected_choice=selected_choice
+                )
+                
+                # Check if it was correct
+                if selected_choice.is_correct:
+                    correct_count += 1
+
+        # 4. Calculate and save the final score
+        if total_questions > 0:
+            attempt.score = (correct_count / total_questions) * 100
+            attempt.save()
+
+        return redirect('quiz_results', attempt_id=attempt.id)
+
+    return render(request, 'quizzes/take_quiz.html', {
+        'quiz': quiz,
+        'questions': questions
+    })
+
 @login_required
 def login_success_view(request):
+    
     """
     Redirects users based on their role after a successful login.
     """
