@@ -36,12 +36,12 @@ python manage.py migrate
 ### 5. Run the Server
 python manage.py runserver
 
-## 🧪 Testing
+## Testing
 Run the automated test suite to verify the Quiz engine and API endpoints:
 
 python manage.py test quizzes
 
-## 📂 Project Structure
+## Project Structure
 - **/core**: Project configuration and settings.
 - **/quizzes**: Core logic, including quiz taking, grading, and leaderboard.
 - **/accounts**: User registration and authentication logic.
