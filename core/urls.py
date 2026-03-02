@@ -7,19 +7,19 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # 1. The Landing Page is now the Login Page
+    # The Landing Page is now the Login Page
     path('', auth_views.LoginView.as_view(
         template_name='quizzes/login.html', 
         redirect_authenticated_user=True
     ), name='login'),
 
-    # 2. Standard Logout (Redirects to login by default)
+    # Standard Logout (Redirects to login by default)
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
 
-    # 3. Include all Quiz & API routes from the quizzes app
+    # Include all Quiz & API routes from the quizzes app
     path('quizzes/', include('quizzes.urls')),
 
-    # 4. Auth API routes
+    # Auth API routes
     path('api/auth/', include('accounts.urls')),
 ]
 

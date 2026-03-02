@@ -52,7 +52,6 @@ async function saveGeneralInfo() {
     const title = document.getElementById('edit-title').value;
     const description = document.getElementById('edit-description').value;
 
-    // We now point to /api/ID/
     const response = await fetch(`/quizzes/api/${quizId}/`, { 
         method: 'PATCH', 
         headers: {

@@ -60,7 +60,7 @@ async function confirmDelete(quizId) {
             });
 
             if (response.ok) {
-                // Remove the card from the UI immediately
+                // Remove the card from the UI 
                 const card = document.getElementById(`quiz-card-${quizId}`);
                 card.style.opacity = '0';
                 setTimeout(() => card.remove(), 300);

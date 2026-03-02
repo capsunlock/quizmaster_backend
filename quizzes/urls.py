@@ -7,15 +7,12 @@ urlpatterns = [
     path('', views.quiz_list_view, name='quiz-list'),
     path('quiz/<int:pk>/', views.quiz_detail_view, name='quiz-detail'),
     
-    # Updated: Leaderboard now requires a quiz_id to show specific rankings
     path('leaderboard/<int:quiz_id>/', views.leaderboard_view, name='leaderboard'),
     
     path('create-quiz/', views.create_quiz_view, name='create-quiz'),
     
-    # New: Route for the Teacher's Edit Interface
     path('edit-quiz/<int:quiz_id>/', views.quiz_edit_view, name='quiz-edit'),
 
-    # Updated: Removed the generic 'results/' and kept the specific ID route
     path('results/<int:attempt_id>/', views.quiz_results_view, name='quiz_results'),
 
     # --- API Routes (for JavaScript Fetch) ---
