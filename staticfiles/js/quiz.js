@@ -51,18 +51,17 @@ document.getElementById('quiz-form').addEventListener('submit', async (e) => {
 
         if (response.ok) {
             const data = await response.json();
-            console.log(data);
-            
-            // Redirect to the detailed results page
-            // We use the attempt_id from the backend to show which questions were wrong
-            window.location.href = `/quizzes/results/${data.attempt_id}/`;
+    
+            // Check if we actually got an ID back
+            if (data.attempt_id) {
+            // Option A: Go to the detailed results page
+             window.location.href = `/quizzes/results/${data.attempt_id}/`;
         } else {
-            const errorData = await response.json();
-            console.error("Submission failed:", errorData);
-            alert("There was an error submitting your quiz. Please try again.");
-            submitBtn.disabled = false;
-            submitBtn.innerText = "Submit Exam";
-        }
+        // Option B: Emergency Backup (If ID is missing, just go to the leaderboard)
+        console.error("ID was missing, redirecting to leaderboard instead.");
+        window.location.href = `/quizzes/leaderboard/`;
+    }
+}
     } catch (error) {
         console.error("Network error:", error);
         alert("A network error occurred. Please check your connection.");
