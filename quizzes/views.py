@@ -195,6 +195,7 @@ def api_submit_quiz(request):
             answers_data = data.get('answers')
             
             quiz = get_object_or_404(Quiz, id=quiz_id)
+            # Create the attempt record for the student
             attempt = Attempt.objects.create(student=request.user, quiz=quiz)
             
             correct_count = 0
@@ -203,21 +204,35 @@ def api_submit_quiz(request):
 
             for item in answers_data:
                 question = get_object_or_404(Question, id=item['question'])
-                selected_choice = get_object_or_404(Choice, id=item['selected_choice'])
-                
-                AttemptAnswer.objects.create(
-                    attempt=attempt,
-                    question=question,
-                    selected_choice=selected_choice
-                )
-                if selected_choice.is_correct:
-                    correct_count += 1
+                choice_id = item.get('selected_choice')
 
+                # Check if the student actually picked something
+                if choice_id:
+                    selected_choice = get_object_or_404(Choice, id=choice_id)
+                    
+                    AttemptAnswer.objects.create(
+                        attempt=attempt,
+                        question=question,
+                        selected_choice=selected_choice
+                    )
+                    
+                    if selected_choice.is_correct:
+                        correct_count += 1
+                else:
+                    # Time ran out or skipped: record the question but no choice
+                    AttemptAnswer.objects.create(
+                        attempt=attempt,
+                        question=question,
+                        selected_choice=None
+                    )
+
+            # Final Score Calculation
             score = (correct_count / total_questions) * 100 if total_questions > 0 else 0
             attempt.score = round(score, 2)
             attempt.save()
 
             return JsonResponse({'score': attempt.score, 'attempt_id': attempt.id})
+            
         except Exception as e:
             traceback.print_exc()
             return JsonResponse({'error': str(e)}, status=400)
