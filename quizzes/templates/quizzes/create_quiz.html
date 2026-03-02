@@ -6,11 +6,12 @@
 <div class="content-area">
     <div class="header-flex">
         <h2>Create a New Quiz</h2>
-        <button type="button" id="add-q" class="btn btn-gold">+ Add Question</button>
+        <button type="button" id="add-q" class="btn btn-gold" onclick="addQuestion()">+ Add Question</button>
     </div>
 
-    <form id="teacher-form">
+    <form id="teacher-form" onsubmit="saveQuiz(event)">
         {% csrf_token %}
+        
         <div class="form-group">
             <label for="title">Quiz Title</label>
             <input type="text" id="title" class="q-text" placeholder="e.g., Introduction to Python" required>
@@ -21,14 +22,135 @@
             <textarea id="desc" class="q-text" rows="2" placeholder="Briefly describe what this quiz covers..."></textarea>
         </div>
 
+        <div class="form-group">
+            <label for="time_limit">Time Limit (Minutes)</label>
+            <input type="number" id="time_limit" class="q-text" value="30" min="1" required>
+        </div>
+
+        <hr style="border-color: var(--border-color); margin: 30px 0;">
+
         <div id="questions-area">
             </div>
 
-        <button type="submit" class="btn btn-primary" style="margin-top: 20px;">Save and Publish Quiz</button>
+        <button type="submit" class="btn btn-primary" style="margin-top: 20px; width: 100%;">Save and Publish Quiz</button>
     </form>
 </div>
+
+<template id="question-template">
+    <div class="question-card" style="background: var(--card-bg); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0;">Question</h4>
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.question-card').remove()">Remove</button>
+        </div>
+        
+        <input type="text" class="q-text question-input" placeholder="Enter question text..." required style="margin-bottom: 15px;">
+        
+        <div class="choices-area">
+            <label style="font-size: 0.9rem; color: var(--text-muted);">Choices (Select the radio for the correct answer)</label>
+            </div>
+        
+        <button type="button" class="btn btn-sm btn-gold" style="margin-top: 10px; font-size: 0.8rem;" onclick="addChoice(this)">+ Add Choice</button>
+    </div>
+</template>
+
+<template id="choice-template">
+    <div class="choice-row" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+        <input type="radio" name="correct-answer-tmp" class="correct-radio" required title="Mark as correct">
+        <input type="text" class="q-text choice-input" placeholder="Choice text..." required style="flex: 1; padding: 8px;">
+        <button type="button" class="btn btn-sm" onclick="this.parentElement.remove()" style="color: #ff4444;">&times;</button>
+    </div>
+</template>
+
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/teacher.js' %}"></script>
+<script>
+    let qCounter = 0;
+
+    function addQuestion() {
+        const area = document.getElementById('questions-area');
+        const temp = document.getElementById('question-template');
+        const clone = temp.content.cloneNode(true);
+        
+        // Group radio buttons uniquely for this question
+        const radioGroupName = `q_choice_${qCounter++}`;
+        clone.querySelectorAll('.correct-radio').forEach(r => r.name = radioGroupName);
+        
+        area.appendChild(clone);
+        
+        // Add two default choices
+        const lastQ = area.lastElementChild.querySelector('.choices-area');
+        addChoice(lastQ);
+        addChoice(lastQ);
+    }
+
+    function addChoice(element) {
+        // Find the choices-area relative to the button clicked or container passed
+        const container = element.classList.contains('choices-area') ? element : element.closest('.question-card').querySelector('.choices-area');
+        const temp = document.getElementById('choice-template');
+        const clone = temp.content.cloneNode(true);
+        
+        // Maintain the same radio group name as other choices in this question
+        const existingRadio = container.querySelector('.correct-radio');
+        if (existingRadio) {
+            clone.querySelector('.correct-radio').name = existingRadio.name;
+        }
+        
+        container.appendChild(clone);
+    }
+
+    async function saveQuiz(event) {
+        event.preventDefault();
+        
+        const quizData = {
+            title: document.getElementById('title').value,
+            description: document.getElementById('desc').value,
+            time_limit: parseInt(document.getElementById('time_limit').value),
+            questions: []
+        };
+
+        const qCards = document.querySelectorAll('.question-card');
+        qCards.forEach(card => {
+            const questionText = card.querySelector('.question-input').value;
+            const choices = [];
+            
+            card.querySelectorAll('.choice-row').forEach(row => {
+                choices.push({
+                    text: row.querySelector('.choice-input').value,
+                    is_correct: row.querySelector('.correct-radio').checked
+                });
+            });
+
+            quizData.questions.push({
+                text: questionText,
+                choices: choices
+            });
+        });
+
+        // Submit via Fetch
+        try {
+            const response = await fetch("{% url 'api-save-quiz' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify(quizData)
+            });
+
+            if (response.ok) {
+                alert("Quiz Published Successfully!");
+                window.location.href = "{% url 'quiz-list' %}";
+            } else {
+                const err = await response.json();
+                alert("Error: " + err.error);
+            }
+        } catch (e) {
+            alert("Connection error. Could not save quiz.");
+        }
+    }
+
+    // Start with one question automatically
+    window.onload = addQuestion;
+</script>
 {% endblock %}
