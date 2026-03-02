@@ -137,6 +137,56 @@ def login_success_view(request):
 
 @csrf_protect
 @login_required
+@user_passes_test(is_teacher_check)
+def api_save_quiz(request):
+    """
+    Expects JSON structure:
+    {
+        "title": "Quiz Title",
+        "description": "...",
+        "time_limit": 30,
+        "questions": [
+            {
+                "text": "Question 1?",
+                "choices": [
+                    {"text": "Ans A", "is_correct": true},
+                    {"text": "Ans B", "is_correct": false}
+                ]
+            }
+        ]
+    }
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # 1. Create the Quiz
+            quiz = Quiz.objects.create(
+                title=data.get('title'),
+                description=data.get('description'),
+                time_limit=data.get('time_limit', 30),
+                creator=request.user
+            )
+
+            # 2. Create Questions and Choices
+            for q_data in data.get('questions', []):
+                question = Question.objects.create(
+                    quiz=quiz,
+                    text=q_data.get('text')
+                )
+                for c_data in q_data.get('choices', []):
+                    Choice.objects.create(
+                        question=question,
+                        text=c_data.get('text'),
+                        is_correct=c_data.get('is_correct', False)
+                    )
+
+            return JsonResponse({'message': 'Quiz created successfully!', 'quiz_id': quiz.id}, status=201)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+@csrf_protect
+@login_required
 def api_submit_quiz(request):
     if request.method == 'POST':
         try:

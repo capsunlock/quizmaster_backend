@@ -9,6 +9,7 @@ class Quiz(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    time_limit = models.PositiveIntegerField(help_text="In minutes", default=30)
 
     def __str__(self):
         return self.title

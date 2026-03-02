@@ -23,6 +23,7 @@ urlpatterns = [
     path('api/submit/', views.api_submit_quiz, name='api-quiz-submit'),
     path('api/delete/<int:quiz_id>/', views.api_delete_quiz, name='api-quiz-delete'),
     path('api/<int:pk>/', views.QuizDetailAPIView.as_view(), name='api-quiz-detail'),
+    path('api/save-quiz/', views.api_save_quiz, name='api-save-quiz'),
     
     # API Leaderboard also updated to match the view's name
     path('api/<int:quiz_id>/leaderboard/', views.LeaderboardAPIView.as_view(), name='api-quiz-leaderboard'),
