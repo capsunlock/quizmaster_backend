@@ -4,6 +4,13 @@
 
 {% block content %}
 <div class="content-area"> 
+    {% if not user.is_teacher %}
+    <div id="timer-container" style="position: sticky; top: 0; background: var(--bg-color); z-index: 1000; padding: 15px; border: 2px solid var(--gold); border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <span style="font-weight: bold; color: var(--text-color);">Time Remaining:</span>
+        <span id="timer" style="font-size: 1.5rem; font-family: monospace; font-weight: bold; color: var(--gold);">--:--</span>
+    </div>
+    {% endif %}
+
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h1>{{ quiz.title }}</h1>
         {% if user.is_teacher %}
@@ -14,12 +21,12 @@
     <input type="hidden" id="quiz-id" value="{{ quiz.id }}">
 
     {% if not user.is_teacher %}
-    <form id="quiz-form">
+    <form id="quiz-form" onsubmit="submitQuiz(event)">
         {% csrf_token %}
     {% endif %}
 
         {% for question in quiz.questions.all %}
-            <div class="question-card">
+            <div class="question-card" data-q-id="{{ question.id }}">
                 <p><strong>{{ forloop.counter }}. {{ question.text }}</strong></p>
                 {% for choice in question.choices.all %}
                     <label class="choice-label" 
@@ -43,7 +50,7 @@
 
         <div class="action-area" style="margin-top: 20px; display: flex; gap: 10px;">
             {% if not user.is_teacher %}
-                <button type="submit" class="btn btn-primary">Submit Exam</button>
+                <button type="submit" class="btn btn-primary" id="submit-btn">Submit Exam</button>
             {% else %}
                 <a href="{% url 'quiz-list' %}" class="btn btn-secondary" style="text-decoration: none; background: #6c757d; color: white; padding: 10px 20px; border-radius: 5px;">Back to Quizzes</a>
                 
@@ -61,6 +68,84 @@
 
 {% block extra_js %}
     {% if not user.is_teacher %}
-        <script src="{% static 'js/quiz.js' %}"></script>
+        <script>
+            // Timer Settings
+            const timeLimitInMinutes = {{ quiz.time_limit }};
+            let timeLeft = timeLimitInMinutes * 60;
+            const timerElement = document.getElementById('timer');
+            const quizForm = document.getElementById('quiz-form');
+
+            // 1. Countdown Logic
+            const countdownInterval = setInterval(() => {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+
+                timerElement.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+                if (timeLeft <= 60) {
+                    timerElement.style.color = "#ff4444"; // Turn red in last minute
+                }
+
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    alert("Time is up! Your answers are being submitted.");
+                    submitQuiz(); // Auto-submit
+                }
+                timeLeft--;
+            }, 1000);
+
+            // 2. Submission Logic
+            async function submitQuiz(event) {
+                if (event) event.preventDefault();
+                
+                clearInterval(countdownInterval);
+                const submitBtn = document.getElementById('submit-btn');
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Submitting...";
+
+                const quizId = document.getElementById('quiz-id').value;
+                const answers = [];
+
+                // Gather data based on your specific ID/Name structure
+                const questionCards = document.querySelectorAll('.question-card');
+                questionCards.forEach(card => {
+                    const qId = card.getAttribute('data-q-id');
+                    const selected = card.querySelector(`input[name="q-${qId}"]:checked`);
+                    
+                    answers.push({
+                        question: parseInt(qId),
+                        selected_choice: selected ? parseInt(selected.value) : null
+                    });
+                });
+
+                const payload = {
+                    quiz: parseInt(quizId),
+                    answers: answers
+                };
+
+                try {
+                    const response = await fetch("{% url 'api-submit-quiz' %}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token }}"
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json();
+                    if (response.ok) {
+                        window.location.href = `/quizzes/results/${data.attempt_id}/`;
+                    } else {
+                        alert("Submission failed: " + (data.error || "Unknown error"));
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "Submit Exam";
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("Network error. Please try again.");
+                }
+            }
+        </script>
     {% endif %}
 {% endblock %}
