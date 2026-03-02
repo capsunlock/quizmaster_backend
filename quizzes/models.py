@@ -43,7 +43,7 @@ class Attempt(models.Model):
 class AttemptAnswer(models.Model):
     attempt = models.ForeignKey(Attempt, on_delete=models.CASCADE, related_name='answers')
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    selected_choice = models.ForeignKey(Choice, on_delete=models.CASCADE)
+    selected_choice = models.ForeignKey(Choice, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return f"{self.attempt.student.username}'s answer to {self.question.text[:20]}"

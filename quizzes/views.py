@@ -77,7 +77,6 @@ class QuizDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         return Quiz.objects.all()
 
 # --- TEMPLATE VIEWS (For Rendering HTML) ---
-# All paths now point to 'quizzes/filename.html' to match your namespaced folder
 
 @login_required
 def quiz_list_view(request):
