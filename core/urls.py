@@ -9,7 +9,7 @@ urlpatterns = [
     
     # 1. The Landing Page is now the Login Page
     path('', auth_views.LoginView.as_view(
-        template_name='login.html', 
+        template_name='quizzes/login.html', 
         redirect_authenticated_user=True
     ), name='login'),
 

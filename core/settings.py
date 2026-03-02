@@ -153,3 +153,4 @@ CORS_ALLOW_ALL_ORIGINS = True  # Only for development btw
 
 LOGIN_REDIRECT_URL = 'login-success'
 LOGOUT_REDIRECT_URL = 'login' # After logout, send them back to the landing page
+LOGIN_URL = 'login'  # Use the 'name' you gave your login path in urls.py

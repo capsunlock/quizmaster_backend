@@ -1,0 +1,77 @@
+{% extends "quizzes/base.html" %}
+{% load static %}
+
+{% block title %}Edit: {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="content-area">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1>Edit Quiz: <span id="display-title">{{ quiz.title }}</span></h1>
+        <a href="{% url 'quiz-list' %}" class="btn btn-secondary">Cancel & Back</a>
+    </div>
+
+    <div class="question-card" style="padding: 20px;">
+        <h3>General Information</h3>
+        <div style="margin-bottom: 15px;">
+            <label>Quiz Title</label>
+            <input type="text" id="edit-title" class="form-control" value="{{ quiz.title }}" style="width: 100%; padding: 10px; margin-top: 5px;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>Description</label>
+            <textarea id="edit-description" class="form-control" style="width: 100%; padding: 10px; margin-top: 5px;" rows="3">{{ quiz.description }}</textarea>
+        </div>
+        <button onclick="saveGeneralInfo()" class="btn btn-primary">Update Basic Info</button>
+    </div>
+
+    <hr style="margin: 40px 0;">
+
+    <h3>Questions & Answers</h3>
+    <p style="color: #666;">Currently, you can manage questions via the Admin panel. Full dynamic question editing is coming in the next update!</p>
+    
+    <div id="questions-list">
+        {% for question in quiz.questions.all %}
+            <div class="question-card" style="border-left: 5px solid #ffc107;">
+                <p><strong>{{ forloop.counter }}. {{ question.text }}</strong></p>
+                <ul>
+                    {% for choice in question.choices.all %}
+                        <li style="{% if choice.is_correct %}color: green; font-weight: bold;{% endif %}">
+                            {{ choice.text }} {% if choice.is_correct %}(Correct Answer){% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function saveGeneralInfo() {
+    const quizId = "{{ quiz.id }}";
+    const title = document.getElementById('edit-title').value;
+    const description = document.getElementById('edit-description').value;
+
+    // We now point to /api/ID/
+    const response = await fetch(`/quizzes/api/${quizId}/`, { 
+        method: 'PATCH', 
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            title: title,
+            description: description
+        })
+    });
+
+    if (response.ok) {
+        document.getElementById('display-title').innerText = title;
+        alert("Quiz updated successfully!");
+    } else {
+        const errorData = await response.json();
+        alert("Error: " + (errorData.detail || "Update failed."));
+    }
+}
+</script>
+{% endblock %}

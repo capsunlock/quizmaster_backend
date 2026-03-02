@@ -1,0 +1,79 @@
+{% extends "quizzes/base.html" %}
+{% block title %}Available Quizzes{% endblock %}
+
+{% block content %}
+<div class="content-area">
+    <h1>Available Quizzes</h1>
+    <div class="quiz-grid"> 
+        {% for quiz in quizzes %}
+            <div class="question-card" id="quiz-card-{{ quiz.id }}">
+                <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+                    <h3>{{ quiz.title }}</h3>
+                    
+                    {% if quiz.created_at > recent_cutoff %}
+                        <span class="badge-new">NEW</span>
+                    {% endif %}
+                </div>
+                
+                <p>{{ quiz.description|truncatewords:20 }}</p>
+                
+                {% if user.is_teacher %}
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        Created by: {{ quiz.creator.username }}
+                    </small>
+                {% endif %}
+                
+                <div class="card-footer" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+
+                    {% if user.is_teacher %}
+                        <a href="{% url 'quiz-detail' quiz.id %}" class="btn btn-primary" style="display:inline-block; width:auto;">Show Quiz</a>
+                        
+                        {% if quiz.creator == user %}
+                            <a href="{% url 'quiz-edit' quiz.id %}" class="btn btn-secondary" style="display:inline-block; width:auto; background-color: #6c757d;">Edit</a>
+                            <button onclick="confirmDelete({{ quiz.id }})" class="btn" style="background-color: #dc3545; color: white; border: none; cursor: pointer; padding: 10px 15px; border-radius: 5px;">Delete</button>
+                        {% endif %}
+
+                    {% else %}
+                        <a href="{% url 'quiz-detail' quiz.id %}" class="btn btn-primary" style="display:inline-block; width:auto;">Take Quiz</a>
+                    {% endif %}
+
+                    <a href="{% url 'leaderboard' quiz.id %}" class="btn" style="background-color: #17a2b8; color: white; text-decoration: none; padding: 10px 15px; border-radius: 5px; font-size: 0.9rem;">Leaderboard</a>
+                    
+                </div>
+            </div>
+        {% empty %}
+            <p>No quizzes available yet. Check back soon!</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+async function confirmDelete(quizId) {
+    if (confirm("Are you sure you want to delete this quiz? This cannot be undone.")) {
+        try {
+            const response = await fetch(`/quizzes/api/delete/${quizId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                // Remove the card from the UI immediately
+                const card = document.getElementById(`quiz-card-${quizId}`);
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 300);
+                alert("Quiz deleted successfully.");
+            } else {
+                const data = await response.json();
+                alert("Error: " + (data.error || "Could not delete quiz."));
+            }
+        } catch (error) {
+            console.error("Delete failed:", error);
+            alert("An error occurred while trying to delete the quiz.");
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "quizzes/base.html" %}
+{% load static %}
+{% block title %}{{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="content-area"> 
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>{{ quiz.title }}</h1>
+        {% if user.is_teacher %}
+            <span class="badge" style="background: #eee; padding: 5px 10px; border-radius: 4px; font-size: 0.8rem;">Preview Mode</span>
+        {% endif %}
+    </div>
+
+    <input type="hidden" id="quiz-id" value="{{ quiz.id }}">
+
+    {% if not user.is_teacher %}
+    <form id="quiz-form">
+        {% csrf_token %}
+    {% endif %}
+
+        {% for question in quiz.questions.all %}
+            <div class="question-card">
+                <p><strong>{{ forloop.counter }}. {{ question.text }}</strong></p>
+                {% for choice in question.choices.all %}
+                    <label class="choice-label" 
+                        {% if user.is_teacher and choice.is_correct %} 
+                            style="border: 2px solid #28a745; background-color: #f6fff8;" 
+                        {% endif %}>
+                        
+                        <input type="radio" name="q-{{ question.id }}" value="{{ choice.id }}" 
+                            {% if not user.is_teacher %} required {% else %} disabled {% endif %}
+                            {% if user.is_teacher and choice.is_correct %} checked {% endif %}>
+                        
+                        {{ choice.text }}
+
+                        {% if user.is_teacher and choice.is_correct %}
+                            <span style="color: #28a745; font-weight: bold; margin-left: 10px;">(Correct)</span>
+                        {% endif %}
+                    </label>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        <div class="action-area" style="margin-top: 20px; display: flex; gap: 10px;">
+            {% if not user.is_teacher %}
+                <button type="submit" class="btn btn-primary">Submit Exam</button>
+            {% else %}
+                <a href="{% url 'quiz-list' %}" class="btn btn-secondary" style="text-decoration: none; background: #6c757d; color: white; padding: 10px 20px; border-radius: 5px;">Back to Quizzes</a>
+                
+                {% if quiz.creator == user %}
+                    <a href="{% url 'quiz-edit' quiz.id %}" class="btn" style="text-decoration: none; background: #ffc107; color: black; padding: 10px 20px; border-radius: 5px;">Edit Quiz</a>
+                {% endif %}
+            {% endif %}
+        </div>
+
+    {% if not user.is_teacher %}
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    {% if not user.is_teacher %}
+        <script src="{% static 'js/quiz.js' %}"></script>
+    {% endif %}
+{% endblock %}
