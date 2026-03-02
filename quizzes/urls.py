@@ -20,7 +20,7 @@ urlpatterns = [
 
     # --- API Routes (for JavaScript Fetch) ---
     path('api/', views.QuizListCreateView.as_view(), name='api-quiz-list'),
-    path('api/submit/', views.api_submit_quiz, name='api-quiz-submit'),
+    path('api/submit-quiz/', views.api_submit_quiz, name='api-submit-quiz'),
     path('api/delete/<int:quiz_id>/', views.api_delete_quiz, name='api-quiz-delete'),
     path('api/<int:pk>/', views.QuizDetailAPIView.as_view(), name='api-quiz-detail'),
     path('api/save-quiz/', views.api_save_quiz, name='api-save-quiz'),
