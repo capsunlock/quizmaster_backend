@@ -244,3 +244,36 @@ td { padding: 18px 15px; border-bottom: 1px solid #eee; vertical-align: middle; 
 .search-container span {
     pointer-events: none;
 }
+
+
+/* --- Dashboard Specifics --- */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.table th {
+    text-align: left;
+    padding: 12px 15px;
+    background: #f8f9fa;
+    color: #666;
+    font-size: 0.85rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.table td {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+.table tr:hover {
+    background-color: #fcfcfc;
+}
+
+/* Ensure badges look consistent in the table */
+.table .badge {
+    min-width: 50px;
+    text-align: center;
+}

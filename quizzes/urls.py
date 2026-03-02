@@ -10,6 +10,8 @@ urlpatterns = [
     path('leaderboard/<int:quiz_id>/', views.leaderboard_view, name='leaderboard'),
     
     path('create-quiz/', views.create_quiz_view, name='create-quiz'),
+
+    path('teacher/dashboard/', views.teacher_dashboard, name='teacher-dashboard'),
     
     path('edit-quiz/<int:quiz_id>/', views.quiz_edit_view, name='quiz-edit'),
 

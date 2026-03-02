@@ -17,6 +17,8 @@ from .serializers import (
     AttemptSerializer, 
     LeaderboardSerializer
 )
+from django.db.models import Avg, Count
+
 
 # --- CUSTOM PERMISSION & HELPER ---
 class IsTeacher(permissions.BasePermission):
@@ -244,3 +246,32 @@ def api_delete_quiz(request, quiz_id):
             quiz.delete()
             return JsonResponse({'message': 'Deleted successfully'}, status=200)
         return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+@login_required
+def teacher_dashboard(request):
+    # Only allow teachers (is_staff) to see this
+    if not request.user.is_staff:
+        return render(request, 'quizzes/403.html') # Or redirect to home
+
+    # 1. Fetch quizzes created by the logged-in user
+    # 2. Annotate adds 'num_attempts' and 'avg_score' as virtual fields on each quiz object
+    quizzes = Quiz.objects.filter(creator=request.user).annotate(
+        num_attempts=Count('attempts'),
+        avg_score=Avg('attempts__score')
+    ).order_by('-created_at')
+
+    # 3. Calculate Global Stats for the top cards
+    total_attempts = Attempt.objects.filter(quiz__creator=request.user).count()
+    
+    global_avg_data = Attempt.objects.filter(
+        quiz__creator=request.user
+    ).aggregate(Avg('score'))
+    
+    global_avg = global_avg_data['score__avg'] or 0
+
+    context = {
+        'quizzes': quizzes,
+        'total_attempts': total_attempts, 
+        'global_avg': round(global_avg, 1), 
+    }
+    return render(request, 'quizzes/teacher_dashboard.html', context)
