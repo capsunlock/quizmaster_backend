@@ -27,7 +27,7 @@
             <input type="number" id="time_limit" class="q-text" value="30" min="1" required>
         </div>
 
-        <hr style="border-color: var(--border-color); margin: 30px 0;">
+        <hr style="border-color: var(--border); margin: 30px 0;">
 
         <div id="questions-area">
             </div>
@@ -37,27 +37,29 @@
 </div>
 
 <template id="question-template">
-    <div class="question-card" style="background: var(--card-bg); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+    <div class="question-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h4 style="margin: 0;">Question</h4>
-            <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.question-card').remove()">Remove</button>
+            <button type="button" class="remove-btn" onclick="this.closest('.question-card').remove()">Remove Question</button>
         </div>
         
         <input type="text" class="q-text question-input" placeholder="Enter question text..." required style="margin-bottom: 15px;">
         
         <div class="choices-area">
-            <label style="font-size: 0.9rem; color: var(--text-muted);">Choices (Select the radio for the correct answer)</label>
-            </div>
+            <label style="font-size: 0.9rem; color: #666; display: block; margin-bottom: 10px;">
+                Choices (Select the radio for the correct answer)
+            </label>
+        </div>
         
-        <button type="button" class="btn btn-sm btn-gold" style="margin-top: 10px; font-size: 0.8rem;" onclick="addChoice(this)">+ Add Choice</button>
+        <button type="button" class="add-choice-btn" onclick="addChoice(this)">+ Add Choice</button>
     </div>
 </template>
 
 <template id="choice-template">
-    <div class="choice-row" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+    <div class="choice-row">
         <input type="radio" name="correct-answer-tmp" class="correct-radio" required title="Mark as correct">
-        <input type="text" class="q-text choice-input" placeholder="Choice text..." required style="flex: 1; padding: 8px;">
-        <button type="button" class="btn btn-sm" onclick="this.parentElement.remove()" style="color: #ff4444;">&times;</button>
+        <input type="text" class="q-text choice-input" placeholder="Choice text..." required>
+        <button type="button" class="delete-choice" onclick="this.parentElement.remove()">&times;</button>
     </div>
 </template>
 
@@ -72,28 +74,37 @@
         const temp = document.getElementById('question-template');
         const clone = temp.content.cloneNode(true);
         
-        // Group radio buttons uniquely for this question
+        // Generate unique radio group name for this question
         const radioGroupName = `q_choice_${qCounter++}`;
-        clone.querySelectorAll('.correct-radio').forEach(r => r.name = radioGroupName);
         
+        // Get the actual DOM node from the document fragment to find internal elements
         area.appendChild(clone);
-        
-        // Add two default choices
-        const lastQ = area.lastElementChild.querySelector('.choices-area');
-        addChoice(lastQ);
-        addChoice(lastQ);
+        const newQuestionCard = area.lastElementChild;
+        const choicesArea = newQuestionCard.querySelector('.choices-area');
+
+        // Add two default choices and set their radio names
+        addChoice(choicesArea, radioGroupName);
+        addChoice(choicesArea, radioGroupName);
     }
 
-    function addChoice(element) {
-        // Find the choices-area relative to the button clicked or container passed
-        const container = element.classList.contains('choices-area') ? element : element.closest('.question-card').querySelector('.choices-area');
+    function addChoice(element, groupName = null) {
+        let container;
+        if (element.classList && element.classList.contains('choices-area')) {
+            container = element;
+        } else {
+            container = element.closest('.question-card').querySelector('.choices-area');
+        }
+
         const temp = document.getElementById('choice-template');
         const clone = temp.content.cloneNode(true);
-        
-        // Maintain the same radio group name as other choices in this question
-        const existingRadio = container.querySelector('.correct-radio');
-        if (existingRadio) {
-            clone.querySelector('.correct-radio').name = existingRadio.name;
+        const radio = clone.querySelector('.correct-radio');
+
+        // If no groupName passed, find the one used by sibling choices
+        if (!groupName) {
+            const existingRadio = container.querySelector('.correct-radio');
+            radio.name = existingRadio ? existingRadio.name : `q_choice_${Date.now()}`;
+        } else {
+            radio.name = groupName;
         }
         
         container.appendChild(clone);
@@ -127,7 +138,6 @@
             });
         });
 
-        // Submit via Fetch
         try {
             const response = await fetch("{% url 'api-save-quiz' %}", {
                 method: "POST",
@@ -150,7 +160,11 @@
         }
     }
 
-    // Start with one question automatically
-    window.onload = addQuestion;
+    // Initialize first question
+    window.onload = () => {
+        if (document.querySelectorAll('.question-card').length === 0) {
+            addQuestion();
+        }
+    };
 </script>
 {% endblock %}
