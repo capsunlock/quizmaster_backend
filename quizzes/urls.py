@@ -17,6 +17,8 @@ urlpatterns = [
 
     path('results/<int:attempt_id>/', views.quiz_results_view, name='quiz_results'),
 
+    path('my-progress/quiz/<int:quiz_id>/', views.quiz_history_detail, name='quiz-history-detail'),
+
     # --- API Routes (for JavaScript Fetch) ---
     path('api/', views.QuizListCreateView.as_view(), name='api-quiz-list'),
     path('api/submit-quiz/', views.api_submit_quiz, name='api-submit-quiz'),
@@ -24,6 +26,6 @@ urlpatterns = [
     path('api/<int:pk>/', views.QuizDetailAPIView.as_view(), name='api-quiz-detail'),
     path('api/save-quiz/', views.api_save_quiz, name='api-save-quiz'),
     
-    # API Leaderboard also updated to match the view's name
+    # API Leaderboard 
     path('api/<int:quiz_id>/leaderboard/', views.LeaderboardAPIView.as_view(), name='api-quiz-leaderboard'),
 ]

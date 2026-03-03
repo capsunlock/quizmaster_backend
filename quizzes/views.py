@@ -20,6 +20,7 @@ from .serializers import (
 from django.db.models import Avg, Count, Max, Min, F
 
 
+
 # --- CUSTOM PERMISSION & HELPER ---
 class IsTeacher(permissions.BasePermission):
     """ Only allows teachers to perform 'Write' actions (POST/PUT/DELETE) """
@@ -278,7 +279,7 @@ def teacher_dashboard(request):
 
 @login_required
 def student_dashboard(request):
-    # 1. Grouped stats for the table (High, Low, Avg per Quiz)
+    # Stats grouped by quiz for the main table
     quiz_stats = Attempt.objects.filter(user=request.user).values(
         'quiz__title', 'quiz__id'
     ).annotate(
@@ -289,20 +290,37 @@ def student_dashboard(request):
         last_date=Max('completed_at')
     ).order_by('-last_date')
 
-    # 2. Raw attempts for the "Most Recent" logic and history
+    # All attempts to find the "Most Recent" in the UI loop
     recent_attempts = Attempt.objects.filter(user=request.user).order_by('-completed_at')
 
-    # 3. Global Stats (Combined performance across ALL quizzes)
+    # Global combined average across every single attempt
     global_stats = recent_attempts.aggregate(
         overall_avg=Avg('score'),
-        total_attempts=Count('id')
+        total_count=Count('id')
     )
 
     context = {
         'quiz_stats': quiz_stats,
         'recent_attempts': recent_attempts,
         'global_student_avg': round(global_stats['overall_avg'] or 0, 1),
-        'total_attempts_count': global_stats['total_attempts'],
+        'total_attempts_count': global_stats['total_count'],
         'total_quizzes_count': quiz_stats.count(),
     }
     return render(request, 'quizzes/student_dashboard.html', context)
+
+
+@login_required
+def quiz_history_detail(request, quiz_id):
+    # This ensures the quiz actually exists
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    
+    # This pulls every attempt by THIS user for THIS quiz, newest first
+    attempts = Attempt.objects.filter(
+        user=request.user, 
+        quiz=quiz
+    ).order_by('-completed_at')
+    
+    return render(request, 'quizzes/quiz_history_detail.html', {
+        'quiz': quiz,
+        'attempts': attempts
+    })
