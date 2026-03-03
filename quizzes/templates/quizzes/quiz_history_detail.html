@@ -24,7 +24,7 @@
                 <div style="display: flex; align-items: center; gap: 20px;">
                     <div>
                         <h3 style="margin: 0; font-size: 1.5rem;">
-                            {{ attempt.score }}%
+                            {{ attempt.score|floatformat:0 }}%
                             
                             {% if not forloop.last %}
                                 {% if attempt.score > next_attempt.score %}
@@ -36,7 +36,14 @@
                                 {% endif %}
                             {% endif %}
                         </h3>
-                        <small style="color: #888;">{{ attempt.completed_at|date:"M d, Y @ P" }}</small>
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                            <small style="color: #888;">{{ attempt.completed_at|date:"M d, Y @ P" }}</small>
+                            {% if attempt.duration %}
+                                <small style="color: var(--primary); font-weight: 500;">
+                                    ⏱ Time Taken: {{ attempt.duration }}
+                                </small>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 

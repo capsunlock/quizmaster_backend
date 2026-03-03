@@ -7,11 +7,24 @@
     <div class="results-header">
         <h1>Quiz Results</h1>
         <p class="quiz-title">{{ attempt.quiz.title }}</p>
-        <div class="score-container">
-            <span class="score-label">Final Score</span>
-            <div class="score-value {% if attempt.score >= 70 %}pass{% else %}fail{% endif %}">
-                {{ attempt.score|floatformat:0 }}%
+        
+        <div style="display: flex; justify-content: center; gap: 40px; align-items: center; margin-top: 20px;">
+            <div class="score-container">
+                <span class="score-label">Final Score</span>
+                <div class="score-value {% if attempt.score >= 70 %}pass{% else %}fail{% endif %}">
+                    {{ attempt.score|floatformat:0 }}%
+                </div>
             </div>
+            
+            {% if attempt.duration %}
+            <div class="time-container" style="text-align: left; border-left: 1px solid #eee; padding-left: 40px;">
+                <span class="score-label">Time Taken</span>
+                <div style="font-size: 1.5rem; font-weight: 600; color: #444; margin-top: 10px;">
+                    {{ attempt.duration }}
+                </div>
+                <small style="color: #888;">Started: {{ attempt.started_at|date:"P" }}</small>
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -50,6 +63,7 @@
 
     <div class="actions">
         <a href="{% url 'quiz-list' %}" class="btn btn-primary">Back to Quizzes</a>
+        <a href="{% url 'student-dashboard' %}" class="btn btn-outline" style="margin-left: 10px;">My Dashboard</a>
     </div>
 </div>
 
@@ -58,9 +72,9 @@
     .results-header { text-align: center; margin-bottom: 30px; }
     .quiz-title { color: #666; font-size: 1.2rem; }
 
-    .score-container { margin-top: 20px; }
-    .score-label { display: block; font-size: 0.9rem; color: #888; text-transform: uppercase; }
-    .score-value { font-size: 3.5rem; font-weight: 800; }
+    .score-container { margin-top: 0; }
+    .score-label { display: block; font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+    .score-value { font-size: 3.5rem; font-weight: 800; line-height: 1; margin-top: 5px; }
     
     .pass { color: #28a745; }
     .fail { color: #dc3545; }
@@ -76,10 +90,7 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
-    /* Green left border for correct */
     .answer-card.is-correct { border-left-color: #28a745; background-color: #f8fff9; }
-    
-    /* Red left border for incorrect */
     .answer-card.is-wrong { border-left-color: #dc3545; background-color: #fff8f8; }
 
     .status-icon { font-weight: bold; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 10px; display: block; }
@@ -98,5 +109,17 @@
     }
 
     .actions { margin-top: 30px; text-align: center; }
+    .btn-outline {
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        padding: 10px 20px;
+        text-decoration: none;
+        border-radius: 5px;
+        transition: 0.3s;
+    }
+    .btn-outline:hover {
+        background: var(--primary);
+        color: white;
+    }
 </style>
 {% endblock %}

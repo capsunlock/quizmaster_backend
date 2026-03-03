@@ -17,13 +17,15 @@
     </a>
     
     <div>
-        {% if user.is_staff %}
-            <a href="{% url 'teacher-dashboard' %}">Dashboard</a>
-        {% endif %}
-        
-        <a href="{% url 'quiz-list' %}">Quizzes</a>
-
         {% if user.is_authenticated %}
+            {% if user.is_teacher %}
+                <a href="{% url 'teacher-dashboard' %}">Dashboard</a>
+            {% else %}
+                <a href="{% url 'student-dashboard' %}">Dashboard</a>
+            {% endif %}
+            
+            <a href="{% url 'quiz-list' %}" style="margin-left: 15px;">Quizzes</a>
+
             {% if user.is_teacher %}
                 <a href="{% url 'create-quiz' %}" style="color: var(--gold); margin-left: 15px;">+ Create Quiz</a>
             {% endif %}
@@ -35,6 +37,7 @@
                 </button>
             </form>
         {% else %}
+            <a href="{% url 'quiz-list' %}">Quizzes</a>
             <a href="{% url 'login' %}" style="margin-left: 15px;">Login</a>
         {% endif %}
     </div>

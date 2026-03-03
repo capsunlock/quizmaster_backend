@@ -160,6 +160,24 @@
         }
     }
 
+    async function uploadJSONQuiz(jsonInput) {
+    const response = await fetch('/api/quizzes/save/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken') // Ensure you have your CSRF helper
+        },
+        body: JSON.stringify(jsonInput)
+    });
+
+    if (response.ok) {
+        alert("Quiz Uploaded Successfully!");
+        window.location.href = "/teacher/dashboard/";
+    } else {
+        alert("Upload failed. Check your JSON formatting.");
+    }
+}
+
     // Initialize first question
     window.onload = () => {
         if (document.querySelectorAll('.question-card').length === 0) {

@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from datetime import timedelta
 
 # Create your models here.
 
@@ -35,10 +36,33 @@ class Attempt(models.Model):
     student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='attempts')
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='attempts')
     score = models.FloatField(default=0.0)
-    completed_at = models.DateTimeField(auto_now_add=True)
+    
+    # Track the start and end times
+    started_at = models.DateTimeField(auto_now_add=True) 
+    completed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.student.username} - {self.quiz.title} ({self.score}%)"
+
+    @property
+    def duration(self):
+        """Calculates the time difference between start and finish."""
+        if self.started_at and self.completed_at:
+            delta = self.completed_at - self.started_at
+            total_seconds = int(delta.total_seconds())
+            
+            # Format into minutes and seconds
+            minutes = total_seconds // 60
+            seconds = total_seconds % 60
+            
+            if minutes > 0:
+                return f"{minutes}m {seconds}s"
+            return f"{seconds}s"
+        return "N/A"
+
+    @property
+    def is_finished(self):
+        return self.completed_at is not None
 
 class AttemptAnswer(models.Model):
     attempt = models.ForeignKey(Attempt, on_delete=models.CASCADE, related_name='answers')

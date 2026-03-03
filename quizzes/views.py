@@ -9,6 +9,7 @@ from django.utils import timezone
 from datetime import timedelta
 from rest_framework import generics, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Avg, Count, Max, Min, F, Q
 
 from .models import Quiz, Attempt, AttemptAnswer, Choice, Question
 from .serializers import (
@@ -17,12 +18,10 @@ from .serializers import (
     AttemptSerializer, 
     LeaderboardSerializer
 )
-from django.db.models import Avg, Count, Max, Min, F
 
+# --- HELPERS & PERMISSIONS ---
 
-# --- CUSTOM PERMISSION & HELPER ---
 class IsTeacher(permissions.BasePermission):
-    """ Only allows teachers to perform 'Write' actions (POST/PUT/DELETE) """
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return request.user.is_authenticated
@@ -31,7 +30,7 @@ class IsTeacher(permissions.BasePermission):
 def is_teacher_check(user):
     return user.is_authenticated and user.is_teacher
 
-# --- API VIEWS (For JavaScript Fetch calls) ---
+# --- API VIEWS (REST Framework) ---
 
 class QuizListCreateView(generics.ListCreateAPIView): 
     queryset = Quiz.objects.all()
@@ -50,7 +49,20 @@ class QuizListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(creator=self.request.user)
 
+class QuizDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """ API endpoint to Get, Update, or Delete a specific quiz """
+    queryset = Quiz.objects.all()
+    serializer_class = QuizSerializer
+    permission_classes = [IsTeacher]
+
+    def get_queryset(self):
+        # Allow teachers to edit/delete only THEIR quizzes, but anyone to view
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            return Quiz.objects.filter(creator=self.request.user)
+        return Quiz.objects.all()
+
 class AttemptCreateView(generics.CreateAPIView):
+    """ API endpoint to create an attempt (alternative to the AJAX flow) """
     queryset = Attempt.objects.all()
     serializer_class = AttemptSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -65,26 +77,14 @@ class LeaderboardAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         quiz_id = self.kwargs.get('quiz_id')
-        return Attempt.objects.filter(quiz_id=quiz_id).order_by('-score', '-completed_at')[:10]
-    
-class QuizDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    """ API endpoint to Get, Update, or Delete a specific quiz """
-    queryset = Quiz.objects.all()
-    serializer_class = QuizSerializer
-    permission_classes = [IsTeacher]
+        return Attempt.objects.filter(quiz_id=quiz_id, completed_at__isnull=False).order_by('-score', '-completed_at')[:10]
 
-    def get_queryset(self):
-        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            return Quiz.objects.filter(creator=self.request.user)
-        return Quiz.objects.all()
-
-# --- TEMPLATE VIEWS (For Rendering HTML) ---
+# --- TEMPLATE VIEWS (HTML Rendering) ---
 
 @login_required
 def quiz_list_view(request):
     quizzes = Quiz.objects.all().order_by('-created_at')
     recent_cutoff = timezone.now() - timedelta(hours=24)
-    
     return render(request, 'quizzes/quiz_list.html', { 
         'quizzes': quizzes,
         'recent_cutoff': recent_cutoff
@@ -93,98 +93,89 @@ def quiz_list_view(request):
 @login_required
 def quiz_detail_view(request, pk):
     quiz = get_object_or_404(Quiz, pk=pk)
+    # START TIME TRACKING
+    attempt = Attempt.objects.create(student=request.user, quiz=quiz, score=0.0)
+    request.session['active_attempt_id'] = attempt.id
     return render(request, 'quizzes/quiz_detail.html', {'quiz': quiz})
 
 @login_required
 def leaderboard_view(request, quiz_id):
-    """ Renders the leaderboard for a SPECIFIC quiz """
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    attempts = Attempt.objects.filter(quiz=quiz).select_related('student').order_by('-score', '-completed_at')[:10]
-    return render(request, 'quizzes/leaderboard.html', {
-        'quiz': quiz,
-        'attempts': attempts
+    attempts = Attempt.objects.filter(quiz=quiz, completed_at__isnull=False).select_related('student').order_by('-score', '-completed_at')[:10]
+    return render(request, 'quizzes/leaderboard.html', {'quiz': quiz, 'attempts': attempts})
+
+# --- DASHBOARDS ---
+
+@login_required
+def teacher_dashboard(request):
+    if not request.user.is_teacher:
+        return render(request, 'quizzes/403.html')
+
+    # 1. Cleanup abandoned ghost attempts (older than 24h)
+    # This removes attempts that were started but never finished
+    Attempt.objects.filter(
+        completed_at__isnull=True, 
+        started_at__lt=timezone.now() - timedelta(hours=24)
+    ).delete()
+
+    # 2. Fetch quizzes created by this teacher and annotate with stats
+    # We use Q objects to ensure we only count and average COMPLETED attempts
+    quizzes = Quiz.objects.filter(creator=request.user).annotate(
+        num_attempts=Count(
+            'attempts', 
+            filter=Q(attempts__completed_at__isnull=False)
+        ),
+        avg_score=Avg(
+            'attempts__score', 
+            filter=Q(attempts__completed_at__isnull=False)
+        )
+    ).order_by('-created_at')
+
+    # 3. Calculate summary stats for the top cards
+    teacher_attempts = Attempt.objects.filter(
+        quiz__creator=request.user, 
+        completed_at__isnull=False
+    )
+    
+    total_attempts = teacher_attempts.count()
+    global_avg = teacher_attempts.aggregate(Avg('score'))['score__avg'] or 0
+
+    return render(request, 'quizzes/teacher_dashboard.html', {
+        'quizzes': quizzes,
+        'total_attempts': total_attempts, 
+        'global_avg': round(global_avg, 1), 
     })
 
 @login_required
-@user_passes_test(is_teacher_check, login_url='quiz-list')
-def create_quiz_view(request):
-    return render(request, 'quizzes/create_quiz.html')
+def student_dashboard(request):
+    quiz_stats = Attempt.objects.filter(student=request.user, completed_at__isnull=False).values(
+        'quiz__title', 'quiz__id'
+    ).annotate(
+        highest=Max('score'),
+        lowest=Min('score'),
+        average=Avg('score'),
+        total_tries=Count('id'),
+        last_date=Max('completed_at')
+    ).order_by('-last_date')
 
-@login_required
-def quiz_edit_view(request, quiz_id):
-    quiz = get_object_or_404(Quiz, id=quiz_id)
-    if not request.user.is_teacher or quiz.creator != request.user:
-        raise PermissionDenied("You can only edit quizzes you created.")
-    
-    return render(request, 'quizzes/quiz_edit.html', {'quiz': quiz})
+    recent_attempts = Attempt.objects.filter(student=request.user, completed_at__isnull=False).order_by('-completed_at')
+    global_stats = recent_attempts.aggregate(overall_avg=Avg('score'), total_count=Count('id'))
 
-@login_required
-def quiz_results_view(request, attempt_id):
-    attempt = get_object_or_404(Attempt, id=attempt_id)
-    if not request.user.is_teacher and attempt.student != request.user:
-        raise PermissionDenied
-    
-    return render(request, 'quizzes/quiz_results.html', {
-        'attempt': attempt
+    return render(request, 'quizzes/student_dashboard.html', {
+        'quiz_stats': quiz_stats,
+        'recent_attempts': recent_attempts,
+        'global_student_avg': round(global_stats['overall_avg'] or 0, 1),
+        'total_attempts_count': global_stats['total_count'],
+        'total_quizzes_count': quiz_stats.count(),
     })
 
 @login_required
-def login_success_view(request):
-    if request.user.is_teacher:
-        return redirect('create-quiz')
-    return redirect('quiz-list')
+def quiz_history_detail(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    attempts = Attempt.objects.filter(student=request.user, quiz=quiz, completed_at__isnull=False).order_by('-completed_at')
+    return render(request, 'quizzes/quiz_history_detail.html', {'quiz': quiz, 'attempts': attempts})
 
-# --- AJAX / FETCH ENDPOINTS ---
-
-@csrf_protect
-@login_required
-@user_passes_test(is_teacher_check)
-def api_save_quiz(request):
-    """
-    Expects JSON structure:
-    {
-        "title": "Quiz Title",
-        "description": "...",
-        "time_limit": 30,
-        "questions": [
-            {
-                "text": "Question 1?",
-                "choices": [
-                    {"text": "Ans A", "is_correct": true},
-                    {"text": "Ans B", "is_correct": false}
-                ]
-            }
-        ]
-    }
-    """
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            
-            # 1. Create the Quiz
-            quiz = Quiz.objects.create(
-                title=data.get('title'),
-                description=data.get('description'),
-                time_limit=data.get('time_limit', 30),
-                creator=request.user
-            )
-
-            # 2. Create Questions and Choices
-            for q_data in data.get('questions', []):
-                question = Question.objects.create(
-                    quiz=quiz,
-                    text=q_data.get('text')
-                )
-                for c_data in q_data.get('choices', []):
-                    Choice.objects.create(
-                        question=question,
-                        text=c_data.get('text'),
-                        is_correct=c_data.get('is_correct', False)
-                    )
-
-            return JsonResponse({'message': 'Quiz created successfully!', 'quiz_id': quiz.id}, status=201)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+# --- AJAX ENDPOINTS ---
 
 @csrf_protect
 @login_required
@@ -195,9 +186,13 @@ def api_submit_quiz(request):
             quiz_id = data.get('quiz')
             answers_data = data.get('answers')
             
+            # Use the attempt started in quiz_detail_view
+            attempt_id = request.session.get('active_attempt_id')
+            if not attempt_id:
+                return JsonResponse({'error': 'No active attempt found. Did you refresh?'}, status=400)
+                
+            attempt = get_object_or_404(Attempt, id=attempt_id, student=request.user)
             quiz = get_object_or_404(Quiz, id=quiz_id)
-            # Create the attempt record for the student
-            attempt = Attempt.objects.create(student=request.user, quiz=quiz)
             
             correct_count = 0
             questions = quiz.questions.all()
@@ -206,36 +201,46 @@ def api_submit_quiz(request):
             for item in answers_data:
                 question = get_object_or_404(Question, id=item['question'])
                 choice_id = item.get('selected_choice')
+                selected_choice = None
 
-                # Check if the student actually picked something
                 if choice_id:
-                    selected_choice = get_object_or_404(Choice, id=choice_id)
-                    
-                    AttemptAnswer.objects.create(
-                        attempt=attempt,
-                        question=question,
-                        selected_choice=selected_choice
-                    )
-                    
+                    selected_choice = Choice.objects.get(id=choice_id)
                     if selected_choice.is_correct:
                         correct_count += 1
-                else:
-                    # Time ran out or skipped: record the question but no choice
-                    AttemptAnswer.objects.create(
-                        attempt=attempt,
-                        question=question,
-                        selected_choice=None
-                    )
+                
+                AttemptAnswer.objects.create(attempt=attempt, question=question, selected_choice=selected_choice)
 
-            # Final Score Calculation
-            score = (correct_count / total_questions) * 100 if total_questions > 0 else 0
-            attempt.score = round(score, 2)
+            attempt.score = round((correct_count / total_questions) * 100, 2) if total_questions > 0 else 0
+            attempt.completed_at = timezone.now()
             attempt.save()
 
+            if 'active_attempt_id' in request.session:
+                del request.session['active_attempt_id']
+
             return JsonResponse({'score': attempt.score, 'attempt_id': attempt.id})
-            
         except Exception as e:
             traceback.print_exc()
+            return JsonResponse({'error': str(e)}, status=400)
+
+@csrf_protect
+@login_required
+@user_passes_test(is_teacher_check)
+def api_save_quiz(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            quiz = Quiz.objects.create(
+                title=data.get('title'),
+                description=data.get('description'),
+                time_limit=data.get('time_limit', 30),
+                creator=request.user
+            )
+            for q_data in data.get('questions', []):
+                question = Question.objects.create(quiz=quiz, text=q_data.get('text'))
+                for c_data in q_data.get('choices', []):
+                    Choice.objects.create(question=question, text=c_data.get('text'), is_correct=c_data.get('is_correct', False))
+            return JsonResponse({'message': 'Quiz created!', 'quiz_id': quiz.id}, status=201)
+        except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
 @login_required
@@ -246,75 +251,28 @@ def api_delete_quiz(request, quiz_id):
             quiz.delete()
             return JsonResponse({'message': 'Deleted successfully'}, status=200)
         return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
-@login_required
-def teacher_dashboard(request):
-    # Only allow teachers (is_staff) to see this
-    if not request.user.is_staff:
-        return render(request, 'quizzes/403.html') # Or redirect to home
 
-    # 1. Fetch quizzes created by the logged-in user
-    # 2. Annotate adds 'num_attempts' and 'avg_score' as virtual fields on each quiz object
-    quizzes = Quiz.objects.filter(creator=request.user).annotate(
-        num_attempts=Count('attempts'),
-        avg_score=Avg('attempts__score')
-    ).order_by('-created_at')
-
-    # 3. Calculate Global Stats for the top cards
-    total_attempts = Attempt.objects.filter(quiz__creator=request.user).count()
-    
-    global_avg_data = Attempt.objects.filter(
-        quiz__creator=request.user
-    ).aggregate(Avg('score'))
-    
-    global_avg = global_avg_data['score__avg'] or 0
-
-    context = {
-        'quizzes': quizzes,
-        'total_attempts': total_attempts, 
-        'global_avg': round(global_avg, 1), 
-    }
-    return render(request, 'quizzes/teacher_dashboard.html', context)
+# --- MISC ---
 
 @login_required
-def student_dashboard(request):
-    # Stats grouped by quiz for the main table
-    quiz_stats = Attempt.objects.filter(user=request.user).values(
-        'quiz__title', 'quiz__id'
-    ).annotate(
-        highest=Max('score'),
-        lowest=Min('score'),
-        average=Avg('score'),
-        total_tries=Count('id'),
-        last_date=Max('completed_at')
-    ).order_by('-last_date')
-
-    # All attempts to find the "Most Recent" in the UI loop
-    recent_attempts = Attempt.objects.filter(user=request.user).order_by('-completed_at')
-
-    # Global combined average across every single attempt
-    global_stats = recent_attempts.aggregate(
-        overall_avg=Avg('score'),
-        total_count=Count('id')
-    )
-
-    context = {
-        'quiz_stats': quiz_stats,
-        'recent_attempts': recent_attempts,
-        'global_student_avg': round(global_stats['overall_avg'] or 0, 1),
-        'total_attempts_count': global_stats['total_count'],
-        'total_quizzes_count': quiz_stats.count(),
-    }
-    return render(request, 'quizzes/student_dashboard.html', context)
-
+def quiz_results_view(request, attempt_id):
+    attempt = get_object_or_404(Attempt, id=attempt_id)
+    if not request.user.is_teacher and attempt.student != request.user:
+        raise PermissionDenied
+    return render(request, 'quizzes/quiz_results.html', {'attempt': attempt})
 
 @login_required
-def quiz_history_detail(request, quiz_id):
+@user_passes_test(is_teacher_check, login_url='quiz-list')
+def create_quiz_view(request):
+    return render(request, 'quizzes/create_quiz.html')
+
+@login_required
+def quiz_edit_view(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    # Order by newest first
-    attempts = Attempt.objects.filter(user=request.user, quiz=quiz).order_by('-completed_at')
-    
-    return render(request, 'quizzes/quiz_history_detail.html', {
-        'quiz': quiz,
-        'attempts': attempts
-    })
+    if not request.user.is_teacher or quiz.creator != request.user:
+        raise PermissionDenied("Unauthorized")
+    return render(request, 'quizzes/quiz_edit.html', {'quiz': quiz})
+
+@login_required
+def login_success_view(request):
+    return redirect('create-quiz') if request.user.is_teacher else redirect('quiz-list')
