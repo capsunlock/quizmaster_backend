@@ -21,41 +21,35 @@
                 </tr>
             </thead>
             <tbody>
-                {% for entry in leaderboard %}
-                <tr>
-                    <td><strong>{{ forloop.counter }}</strong></td>
-                    <td>
-                        <a href="{% url 'quiz-history-detail' quiz.id %}?student_id={{ entry.student__id }}" 
-                           style="font-weight: bold; color: var(--primary); text-decoration: none;">
-                            {{ entry.student__username }}
-                        </a>
-                    </td>
-                    <td style="text-align: center;">
-                        <span class="badge bg-success" style="min-width: 50px;">
-                            {{ entry.best_score|floatformat:0 }}%
-                        </span>
-                    </td>
-                    <td style="text-align: center;">
-                        <span class="badge bg-info" style="min-width: 50px; background-color: #17a2b8;">
-                            {{ entry.latest_score|floatformat:0 }}%
-                        </span>
-                    </td>
-                    <td style="text-align: center;">
-                        <span class="badge bg-warning" style="min-width: 50px;">
-                            {{ entry.worst_score|floatformat:0 }}%
-                        </span>
-                    </td>
-                    <td style="text-align: right; color: #888; font-size: 0.9rem;">
-                        {{ entry.last_attempt_date|date:"M d, Y" }}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center" style="padding: 40px; color: #888;">
-                        No scores recorded yet. Be the first to top the charts!
-                    </td>
-                </tr>
-                {% endfor %}
+               {% for entry in leaderboard %}
+<tr>
+    <td><strong>{{ forloop.counter }}</strong></td>
+    <td>
+        {% if user.is_teacher %}
+            <a href="{% url 'student-dashboard' %}?student_id={{ entry.student__id }}" 
+               style="font-weight: bold; color: var(--primary); text-decoration: underline;">
+                {{ entry.student__username }}
+            </a>
+        {% else %}
+            <span style="font-weight: 500; color: var(--dark);">
+                {{ entry.student__username }}
+            </span>
+        {% endif %}
+    </td>
+    <td style="text-align: center;">
+        <span class="badge bg-success">{{ entry.best_score|floatformat:0 }}%</span>
+    </td>
+    <td style="text-align: center;">
+        <span class="badge bg-info" style="background-color: #17a2b8;">{{ entry.latest_score|floatformat:0 }}%</span>
+    </td>
+    <td style="text-align: center;">
+        <span class="badge bg-warning">{{ entry.worst_score|floatformat:0 }}%</span>
+    </td>
+    <td style="text-align: right; color: #888; font-size: 0.9rem;">
+        {{ entry.last_attempt_date|date:"M d, Y" }}
+    </td>
+</tr>
+{% endfor %}
             </tbody>
         </table>
     </div>

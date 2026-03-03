@@ -9,7 +9,7 @@ from django.utils import timezone
 from datetime import timedelta
 from rest_framework import generics, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Avg, Count, Max, Min, F, Q
+from django.db.models import Avg, Count, Max, Min, F, Q, Subquery, OuterRef
 
 from .models import Quiz, Attempt, AttemptAnswer, Choice, Question
 from .serializers import (
@@ -170,7 +170,21 @@ def teacher_dashboard(request):
 
 @login_required
 def student_dashboard(request):
-    quiz_stats = Attempt.objects.filter(student=request.user, completed_at__isnull=False).values(
+    # Check if a specific student_id was passed (Teacher view)
+    target_user_id = request.GET.get('student_id')
+    
+    if target_user_id and request.user.is_teacher:
+        # Teacher is viewing a student's dashboard
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        display_user = get_object_or_404(User, id=target_user_id)
+        is_owner = False
+    else:
+        # Student is viewing their own dashboard
+        display_user = request.user
+        is_owner = True
+
+    quiz_stats = Attempt.objects.filter(student=display_user, completed_at__isnull=False).values(
         'quiz__title', 'quiz__id'
     ).annotate(
         highest=Max('score'),
@@ -180,10 +194,12 @@ def student_dashboard(request):
         last_date=Max('completed_at')
     ).order_by('-last_date')
 
-    recent_attempts = Attempt.objects.filter(student=request.user, completed_at__isnull=False).order_by('-completed_at')
+    recent_attempts = Attempt.objects.filter(student=display_user, completed_at__isnull=False).order_by('-completed_at')
     global_stats = recent_attempts.aggregate(overall_avg=Avg('score'), total_count=Count('id'))
 
     return render(request, 'quizzes/student_dashboard.html', {
+        'display_user': display_user,
+        'is_owner': is_owner,
         'quiz_stats': quiz_stats,
         'recent_attempts': recent_attempts,
         'global_student_avg': round(global_stats['overall_avg'] or 0, 1),
@@ -195,26 +211,29 @@ def student_dashboard(request):
 def quiz_history_detail(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
     
-    # If a teacher clicks a student in the leaderboard, 
-    # we use the 'student_id' from the URL. Otherwise, show the logged-in user's history.
+    # Check if teacher is looking at a specific student
     target_user_id = request.GET.get('student_id')
     
     if target_user_id and request.user.is_teacher:
-        # Teacher viewing a specific student
+        # Teacher view: Filter by the target student
         attempts = Attempt.objects.filter(student_id=target_user_id, quiz=quiz, completed_at__isnull=False)
-        display_user = attempts.first().student.username if attempts.exists() else "Student"
+        from django.contrib.auth import get_user_model
+        student_obj = get_object_or_404(get_user_model(), id=target_user_id)
+        display_name = f"{student_obj.username}'s"
     else:
-        # Standard student viewing their own history
+        # Student view: Filter by themselves
         attempts = Attempt.objects.filter(student=request.user, quiz=quiz, completed_at__isnull=False)
-        display_user = "My"
+        display_name = "My"
 
     attempts = attempts.order_by('-completed_at')
     
     return render(request, 'quizzes/quiz_history_detail.html', {
         'quiz': quiz, 
         'attempts': attempts,
-        'display_user': display_user
+        'display_name': display_name,
+        'target_user_id': target_user_id # Pass this so links stay consistent
     })
+
 # --- AJAX ENDPOINTS ---
 
 @csrf_protect
@@ -293,6 +312,7 @@ def api_delete_quiz(request, quiz_id):
         return JsonResponse({'error': 'Unauthorized'}, status=403)
 
 # --- MISC ---
+
 
 @login_required
 def quiz_results_view(request, attempt_id):

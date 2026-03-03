@@ -11,10 +11,14 @@
 
     <div class="header-flex" style="margin-bottom: 30px;">
         <div>
-            <h2 style="margin: 0;">{{ quiz.title }}</h2>
+            <h2 style="margin: 0;">{{ display_name }} History for {{ quiz.title }}</h2>
+            
             <p style="color: #666; margin: 5px 0 0 0;">Review your progress over time</p>
         </div>
-        <a href="{% url 'quiz-detail' quiz.id %}" class="btn btn-gold" style="width: auto;">Retake Quiz</a>
+
+        {% if is_owner %}
+            <a href="{% url 'quiz-detail' quiz.id %}" class="btn btn-gold" style="width: auto;">Retake Quiz</a>
+        {% endif %}
     </div>
 
     <div class="history-timeline">
