@@ -9,12 +9,12 @@ A full-stack Quiz application built with **Django** and **Vanilla JavaScript**. 
 * **Secure Authentication:** Role-based access for Students and Teachers.
 * **RESTful API:** Clean data endpoints for quiz submission and scoring.
 
-## 🛠️ Tech Stack
+## Tech Stack
 * **Backend:** Django 6.0, Django REST Framework
 * **Frontend:** HTML5, CSS3 (Custom Variables), JavaScript (ES6+)
 * **Database:** SQLite (Development)
 
-## 🏁 Getting Started
+## Getting Started
 
 ### 1. Clone the repository
 git clone https://github.com/capsunlock/quizmaster_backend.git
