@@ -1,32 +1,56 @@
 {% extends "quizzes/base.html" %}
 {% block content %}
 <div class="content-area" style="max-width: 800px;">
-    <div style="margin-bottom: 20px;">
-        <a href="{% url 'student-dashboard' %}" style="text-decoration: none; color: var(--primary); font-weight: bold;">
-            ← Back to Dashboard
-        </a>
-    </div>
+    <nav style="margin-bottom: 20px;">
+        <a href="{% url 'student-dashboard' %}" style="text-decoration: none; color: var(--primary); font-size: 0.9rem;">
+            Dashboard
+        </a> 
+        <span style="color: #ccc; margin: 0 10px;">/</span> 
+        <span style="color: #888; font-size: 0.9rem;">Attempt History</span>
+    </nav>
 
-    <div class="header-flex">
-        <h2>Attempt History: {{ quiz.title }}</h2>
+    <div class="header-flex" style="margin-bottom: 30px;">
+        <div>
+            <h2 style="margin: 0;">{{ quiz.title }}</h2>
+            <p style="color: #666; margin: 5px 0 0 0;">Review your progress over time</p>
+        </div>
         <a href="{% url 'quiz-detail' quiz.id %}" class="btn btn-gold" style="width: auto;">Retake Quiz</a>
     </div>
 
-    <div class="history-list">
+    <div class="history-timeline">
         {% for attempt in attempts %}
-        <div class="question-card" style="display: flex; justify-content: space-between; align-items: center; border-left: 5px solid {% if attempt.score >= 70 %}var(--success){% else %}var(--primary){% endif %};">
-            <div>
-                <h3 style="margin: 0; color: var(--dark);">{{ attempt.score }}%</h3>
-                <small style="color: #888;">{{ attempt.completed_at|date:"F d, Y @ P" }}</small>
+            {% with next_attempt=attempts|slice:forloop.counter|first %}
+            <div class="question-card" style="display: flex; justify-content: space-between; align-items: center; border-left: 5px solid {% if attempt.score >= 70 %}#28a745{% else %}#007bff{% endif %};">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.5rem;">
+                            {{ attempt.score }}%
+                            
+                            {% if not forloop.last %}
+                                {% if attempt.score > next_attempt.score %}
+                                    <span style="color: #28a745; font-size: 1.2rem; margin-left: 5px;" title="Improved from last time">↑</span>
+                                {% elif attempt.score < next_attempt.score %}
+                                    <span style="color: #dc3545; font-size: 1.2rem; margin-left: 5px;" title="Lower than last time">↓</span>
+                                {% else %}
+                                    <span style="color: #ffc107; font-size: 1.2rem; margin-left: 5px;" title="Same as last time">→</span>
+                                {% endif %}
+                            {% endif %}
+                        </h3>
+                        <small style="color: #888;">{{ attempt.completed_at|date:"M d, Y @ P" }}</small>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="badge {% if attempt.score >= 70 %}bg-success{% else %}bg-warning{% endif %}">
+                        {% if attempt.score >= 70 %}Mastered{% else %}Practice{% endif %}
+                    </span>
+                </div>
             </div>
-            <div>
-                <span class="badge {% if attempt.score >= 70 %}bg-success{% else %}bg-warning{% endif %}">
-                    {% if attempt.score >= 70 %}Mastered{% else %}Keep Improving{% endif %}
-                </span>
-            </div>
-        </div>
+            {% endwith %}
         {% empty %}
-        <p>No attempts found for this quiz.</p>
+            <div class="question-card" style="text-align: center; padding: 40px;">
+                <p style="color: #888;">No history found. Time to take your first shot!</p>
+            </div>
         {% endfor %}
     </div>
 </div>

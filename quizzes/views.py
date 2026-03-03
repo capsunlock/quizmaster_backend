@@ -20,7 +20,6 @@ from .serializers import (
 from django.db.models import Avg, Count, Max, Min, F
 
 
-
 # --- CUSTOM PERMISSION & HELPER ---
 class IsTeacher(permissions.BasePermission):
     """ Only allows teachers to perform 'Write' actions (POST/PUT/DELETE) """
@@ -311,14 +310,9 @@ def student_dashboard(request):
 
 @login_required
 def quiz_history_detail(request, quiz_id):
-    # This ensures the quiz actually exists
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    
-    # This pulls every attempt by THIS user for THIS quiz, newest first
-    attempts = Attempt.objects.filter(
-        user=request.user, 
-        quiz=quiz
-    ).order_by('-completed_at')
+    # Order by newest first
+    attempts = Attempt.objects.filter(user=request.user, quiz=quiz).order_by('-completed_at')
     
     return render(request, 'quizzes/quiz_history_detail.html', {
         'quiz': quiz,
