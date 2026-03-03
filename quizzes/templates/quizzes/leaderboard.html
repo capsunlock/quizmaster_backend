@@ -1,9 +1,12 @@
 {% extends "quizzes/base.html" %}
 
 {% block content %}
-<div class="content-area">
-    <h2>🏆 Leaderboard</h2>
-    <hr>
+<div class="content-area" style="max-width: 1000px;">
+    <div class="header-flex">
+        <h2>🏆 Leaderboard: {{ quiz.title }}</h2>
+        <a href="{% url 'quiz-list' %}" class="btn btn-outline">Back to Quizzes</a>
+    </div>
+    <p style="color: #666; margin-bottom: 25px;">Top performers and consistency tracking</p>
 
     <div class="table-responsive">
         <table class="table table-hover">
@@ -11,31 +14,55 @@
                 <tr>
                     <th>Rank</th>
                     <th>Student</th>
-                    <th>Score (%)</th>
-                    <th>Date</th>
-                    <th>Quiz Title</th>
+                    <th style="text-align: center;">Best Score</th>
+                    <th style="text-align: center;">Latest Score</th>
+                    <th style="text-align: center;">Worst Score</th>
+                    <th style="text-align: right;">Last Attempt</th>
                 </tr>
             </thead>
             <tbody>
-                {% for attempt in attempts %}
+                {% for entry in leaderboard %}
                 <tr>
                     <td><strong>{{ forloop.counter }}</strong></td>
-                    <td>{{ attempt.student.username }}</td>
                     <td>
-                        <span class="badge {% if attempt.score >= 70 %}bg-success{% elif attempt.score >= 40 %}bg-warning{% else %}bg-danger{% endif %}">
-                            {{ attempt.score }}%
+                        <a href="{% url 'quiz-history-detail' quiz.id %}?student_id={{ entry.student__id }}" 
+                           style="font-weight: bold; color: var(--primary); text-decoration: none;">
+                            {{ entry.student__username }}
+                        </a>
+                    </td>
+                    <td style="text-align: center;">
+                        <span class="badge bg-success" style="min-width: 50px;">
+                            {{ entry.best_score|floatformat:0 }}%
                         </span>
                     </td>
-                    <td>{{ attempt.completed_at|date:"M d, Y" }}</td>
-                    <td><a href="{% url 'quiz-detail' attempt.quiz.id %}">{{ attempt.quiz.title }}</a></td>
+                    <td style="text-align: center;">
+                        <span class="badge bg-info" style="min-width: 50px; background-color: #17a2b8;">
+                            {{ entry.latest_score|floatformat:0 }}%
+                        </span>
+                    </td>
+                    <td style="text-align: center;">
+                        <span class="badge bg-warning" style="min-width: 50px;">
+                            {{ entry.worst_score|floatformat:0 }}%
+                        </span>
+                    </td>
+                    <td style="text-align: right; color: #888; font-size: 0.9rem;">
+                        {{ entry.last_attempt_date|date:"M d, Y" }}
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="text-center">No scores recorded yet. Be the first!</td>
+                    <td colspan="6" class="text-center" style="padding: 40px; color: #888;">
+                        No scores recorded yet. Be the first to top the charts!
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<style>
+    .bg-info { background-color: #17a2b8 !important; color: white; }
+    .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+</style>
 {% endblock %}

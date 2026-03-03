@@ -38,7 +38,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Add custom data to the response
         data['is_teacher'] = self.user.is_teacher
         
-        # Logic: If NOT a teacher, tell them to go to quizzes
+        # Logic: If NOT a teacher, take them to go to quizzes
         if not self.user.is_teacher:
             data['next_url'] = '/api/quizzes/'
         else:

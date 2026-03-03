@@ -1,6 +1,6 @@
 # QuizMaster - Capstone Project
 
-A full-stack Quiz application built with **Django** and **Vanilla JavaScript**. This platform allows teachers to create quizzes and students to take them, featuring real-time scoring, detailed result breakdowns, and a global leaderboard.
+A full-stack Quiz application built with **Django** and **Vanilla JavaScript**. This platform allows teachers to create quizzes and students to take them, featuring real-time scoring, detailed result breakdowns, and leaderboard.
 
 ## Key Features
 * **Dynamic Quiz Interface:** Fully responsive quiz player powered by Fetch API.
@@ -13,7 +13,6 @@ A full-stack Quiz application built with **Django** and **Vanilla JavaScript**. 
 * **Backend:** Django 6.0, Django REST Framework
 * **Frontend:** HTML5, CSS3 (Custom Variables), JavaScript (ES6+)
 * **Database:** SQLite (Development)
-- **API Engine:** Django Rest Framework (DRF)
 
 ## 🏁 Getting Started
 
@@ -34,6 +33,7 @@ pip install -r requirements.txt
 
 ### 4. Database Setup
 python manage.py makemigrations
+
 python manage.py migrate
 
 ### 5. Run the Server

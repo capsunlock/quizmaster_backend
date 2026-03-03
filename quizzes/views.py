@@ -101,8 +101,30 @@ def quiz_detail_view(request, pk):
 @login_required
 def leaderboard_view(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    attempts = Attempt.objects.filter(quiz=quiz, completed_at__isnull=False).select_related('student').order_by('-score', '-completed_at')[:10]
-    return render(request, 'quizzes/leaderboard.html', {'quiz': quiz, 'attempts': attempts})
+    
+    # Subquery to get the latest score for each student
+    latest_attempt = Attempt.objects.filter(
+        student=OuterRef('student'),
+        quiz=quiz,
+        completed_at__isnull=False
+    ).order_by('-completed_at')
+
+    # Group by student and get high, low, and latest scores
+    # This prevents one student from filling up the board
+    leaderboard_data = Attempt.objects.filter(
+        quiz=quiz, 
+        completed_at__isnull=False
+    ).values('student__username', 'student__id').annotate(
+        best_score=Max('score'),
+        worst_score=Min('score'),
+        latest_score=Subquery(latest_attempt.values('score')[:1]),
+        last_attempt_date=Max('completed_at')
+    ).order_by('-best_score')
+
+    return render(request, 'quizzes/leaderboard.html', {
+        'quiz': quiz, 
+        'leaderboard': leaderboard_data
+    })
 
 # --- DASHBOARDS ---
 
@@ -172,9 +194,27 @@ def student_dashboard(request):
 @login_required
 def quiz_history_detail(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    attempts = Attempt.objects.filter(student=request.user, quiz=quiz, completed_at__isnull=False).order_by('-completed_at')
-    return render(request, 'quizzes/quiz_history_detail.html', {'quiz': quiz, 'attempts': attempts})
+    
+    # If a teacher clicks a student in the leaderboard, 
+    # we use the 'student_id' from the URL. Otherwise, show the logged-in user's history.
+    target_user_id = request.GET.get('student_id')
+    
+    if target_user_id and request.user.is_teacher:
+        # Teacher viewing a specific student
+        attempts = Attempt.objects.filter(student_id=target_user_id, quiz=quiz, completed_at__isnull=False)
+        display_user = attempts.first().student.username if attempts.exists() else "Student"
+    else:
+        # Standard student viewing their own history
+        attempts = Attempt.objects.filter(student=request.user, quiz=quiz, completed_at__isnull=False)
+        display_user = "My"
 
+    attempts = attempts.order_by('-completed_at')
+    
+    return render(request, 'quizzes/quiz_history_detail.html', {
+        'quiz': quiz, 
+        'attempts': attempts,
+        'display_user': display_user
+    })
 # --- AJAX ENDPOINTS ---
 
 @csrf_protect
