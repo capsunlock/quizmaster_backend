@@ -1,22 +1,25 @@
-# QuizMaster API
+# QuizMaster - Capstone Project
 
-A RESTful API built with Django Rest Framework for managing online quizzes and leaderboards.
+A full-stack Quiz application built with **Django** and **Vanilla JavaScript**. This platform allows teachers to create quizzes and students to take them, featuring real-time scoring, detailed result breakdowns, and a global leaderboard.
 
-## Features
-- Custom User Roles (Teacher/Student)
-- Token-based Authentication
-- Real-time Grading Engine (Coming Soon)
-- Global Leaderboard (Coming Soon)
+## Key Features
+* **Dynamic Quiz Interface:** Fully responsive quiz player powered by Fetch API.
+* **Detailed Results:** Instant grading with a question-by-question breakdown.
+* **Leaderboard:** Ranking system based on accuracy.
+* **Secure Authentication:** Role-based access for Students and Teachers.
+* **RESTful API:** Clean data endpoints for quiz submission and scoring.
 
-## Tech Stack
-- **Framework:** Django 5.x
+## 🛠️ Tech Stack
+* **Backend:** Django 6.0, Django REST Framework
+* **Frontend:** HTML5, CSS3 (Custom Variables), JavaScript (ES6+)
+* **Database:** SQLite (Development)
 - **API Engine:** Django Rest Framework (DRF)
-- **Database:** PostgreSQL (Production) / SQLite (Development)
 
 ## 🏁 Getting Started
 
 ### 1. Clone the repository
 git clone https://github.com/capsunlock/quizmaster_backend.git
+
 cd quizmaster_backend
 
 ### 2. Set up Virtual Environment
