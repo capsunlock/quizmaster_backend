@@ -17,7 +17,7 @@ from .serializers import (
     AttemptSerializer, 
     LeaderboardSerializer
 )
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Max, Min, F
 
 
 # --- CUSTOM PERMISSION & HELPER ---
@@ -275,3 +275,34 @@ def teacher_dashboard(request):
         'global_avg': round(global_avg, 1), 
     }
     return render(request, 'quizzes/teacher_dashboard.html', context)
+
+@login_required
+def student_dashboard(request):
+    # 1. Grouped stats for the table (High, Low, Avg per Quiz)
+    quiz_stats = Attempt.objects.filter(user=request.user).values(
+        'quiz__title', 'quiz__id'
+    ).annotate(
+        highest=Max('score'),
+        lowest=Min('score'),
+        average=Avg('score'),
+        total_tries=Count('id'),
+        last_date=Max('completed_at')
+    ).order_by('-last_date')
+
+    # 2. Raw attempts for the "Most Recent" logic and history
+    recent_attempts = Attempt.objects.filter(user=request.user).order_by('-completed_at')
+
+    # 3. Global Stats (Combined performance across ALL quizzes)
+    global_stats = recent_attempts.aggregate(
+        overall_avg=Avg('score'),
+        total_attempts=Count('id')
+    )
+
+    context = {
+        'quiz_stats': quiz_stats,
+        'recent_attempts': recent_attempts,
+        'global_student_avg': round(global_stats['overall_avg'] or 0, 1),
+        'total_attempts_count': global_stats['total_attempts'],
+        'total_quizzes_count': quiz_stats.count(),
+    }
+    return render(request, 'quizzes/student_dashboard.html', context)
