@@ -1,15 +1,20 @@
 from pathlib import Path
 from datetime import timedelta
 import os
+import environ
 
+env = environ.Env(
+    DEBUG=(bool, False)
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+environ.Env.read_env(os.path.join(BASE_DIR,'.env'))
 
-SECRET_KEY = 'django-insecure-80!_vzv%ucjpxsawrz1)b(b!z%(1m7o*j()*ipw@#3kb2*2qsy'
 
+SECRET_KEY = env('SECRET_KEY')
+DEBUG = env.bool('DEBUG', default=False)
 
-DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -70,13 +75,16 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
+DATABASES = {
+    'default': env.db(),
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -147,4 +155,4 @@ CORS_ALLOW_ALL_ORIGINS = True  # Only for development btw
 
 LOGIN_REDIRECT_URL = 'login-success'
 LOGOUT_REDIRECT_URL = 'login' # After logout, send them back to the landing page
-LOGIN_URL = 'login'  # Use the 'name' you gave your login path in urls.py
+LOGIN_URL = 'login' 

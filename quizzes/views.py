@@ -19,7 +19,7 @@ from .serializers import (
     LeaderboardSerializer
 )
 
-# --- HELPERS & PERMISSIONS ---
+#  HELPERS & PERMISSIONS 
 
 class IsTeacher(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -30,7 +30,7 @@ class IsTeacher(permissions.BasePermission):
 def is_teacher_check(user):
     return user.is_authenticated and user.is_teacher
 
-# --- API VIEWS (REST Framework) ---
+#  API VIEWS (REST Framework) 
 
 class QuizListCreateView(generics.ListCreateAPIView): 
     queryset = Quiz.objects.all()
@@ -79,7 +79,7 @@ class LeaderboardAPIView(generics.ListAPIView):
         quiz_id = self.kwargs.get('quiz_id')
         return Attempt.objects.filter(quiz_id=quiz_id, completed_at__isnull=False).order_by('-score', '-completed_at')[:10]
 
-# --- TEMPLATE VIEWS (HTML Rendering) ---
+#  TEMPLATE VIEWS (HTML Rendering) 
 
 @login_required
 def quiz_list_view(request):
@@ -126,7 +126,7 @@ def leaderboard_view(request, quiz_id):
         'leaderboard': leaderboard_data
     })
 
-# --- DASHBOARDS ---
+#  DASHBOARDS 
 
 @login_required
 def teacher_dashboard(request):
@@ -257,7 +257,7 @@ def quiz_history_detail(request, quiz_id):
         'target_user_id': target_user_id # Pass this so links stay consistent
     })
 
-# --- AJAX ENDPOINTS ---
+#  AJAX ENDPOINTS 
 
 @csrf_protect
 @login_required
@@ -334,7 +334,7 @@ def api_delete_quiz(request, quiz_id):
             return JsonResponse({'message': 'Deleted successfully'}, status=200)
         return JsonResponse({'error': 'Unauthorized'}, status=403)
 
-# --- MISC ---
+#  MISC 
 
 
 @login_required
@@ -357,5 +357,11 @@ def quiz_edit_view(request, quiz_id):
     return render(request, 'quizzes/quiz_edit.html', {'quiz': quiz})
 
 @login_required
-def login_success_view(request):
-    return redirect('create-quiz') if request.user.is_teacher else redirect('quiz-list')
+def login_success(request):
+    """
+    Redirects users to their appropriate dashboard based on their role.
+    """
+    if request.user.is_teacher:
+        return redirect('teacher-dashboard') 
+    else:
+        return redirect('student-dashboard') 

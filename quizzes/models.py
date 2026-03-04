@@ -8,6 +8,8 @@ class Quiz(models.Model):
     # The teacher who created this quiz
     creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='quizzes')
     title = models.CharField(max_length=255)
+    subject = models.CharField(max_length=100, default="General")
+    year = models.IntegerField(null=True, blank=True)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     time_limit = models.PositiveIntegerField(help_text="In minutes", default=30)

@@ -11,7 +11,7 @@
 <body>
 
 <nav class="navbar">
-    <a href="{% if user.is_authenticated %}{% url 'login-success' %}{% else %}{% url 'login' %}{% endif %}" 
+    <a href="{% if user.is_authenticated and user.is_teacher %}{% url 'teacher-dashboard' %}{% else %}{% url 'student-dashboard' %}{% endif %}" 
        style="font-size: 1.5rem; font-weight: bold; text-decoration: none; color: white;">
        QuizMaster
     </a>
