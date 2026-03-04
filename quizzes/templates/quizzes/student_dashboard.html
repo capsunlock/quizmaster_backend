@@ -1,5 +1,5 @@
 {% extends "quizzes/base.html" %}
-{% block title %}My Learning Dashboard{% endblock %}
+{% block title %}Learning Dashboard{% endblock %}
 
 {% block content %}
 <div class="content-area" style="max-width: 1200px;">
@@ -8,14 +8,13 @@
         <h2>
             {% if is_owner %}
                 My Performance Dashboard 
-            </h2>
-
-            <a href="{% url 'quiz-list' %}" class="btn btn-gold" style="width: auto;">Take a New Quiz</a>
-        {% else %}
+            {% else %}
                 Performance Profile: {{ display_user.username }}
-            </h2>
+            {% endif %}
+        </h2>
+        {% if is_owner %}
+            <a href="{% url 'quiz-list' %}" class="btn btn-gold" style="width: auto;">Take a New Quiz</a>
         {% endif %}
-
     </div>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
@@ -52,36 +51,25 @@
                 <tr>
                     <td><strong>{{ stat.quiz__title }}</strong></td>
                     <td style="text-align: center;">{{ stat.total_tries }}</td>
-                    <td style="text-align: center; font-weight: bold;">{{ stat.highest }}%</td>
-                    <td style="text-align: center;">{{ stat.lowest }}%</td>
+                    <td style="text-align: center; font-weight: bold; color: #28a745;">{{ stat.highest }}%</td>
+                    <td style="text-align: center; color: #dc3545;">{{ stat.lowest }}%</td>
                     <td style="text-align: center;">{{ stat.average|floatformat:1 }}%</td>
                     <td style="text-align: center; background: #f8f9fa;">
-                        {% for attempt in recent_attempts %}
-                            {% if attempt.quiz_id == stat.quiz__id %}
-                                {% if forloop.parentloop.first or attempt.quiz_id == stat.quiz__id %}
-                                    <strong>{{ attempt.score }}%</strong>
-                                    <br><small style="color: #999;">{{ attempt.completed_at|date:"M d" }}</small>
-                                {% endif %}
-                            {% endif %}
-                        {% endfor %}
+                        <strong>{{ stat.latest_score|floatformat:0 }}%</strong>
+                        <br><small style="color: #999;">{{ stat.last_date|date:"M d" }}</small>
                     </td>
                     <td style="text-align: right;">
                         <div style="display: flex; gap: 5px; justify-content: flex-end;">
                             <a href="{% url 'quiz-history-detail' stat.quiz__id %}{% if not is_owner %}?student_id={{ display_user.id }}{% endif %}" class="btn" style="background: var(--dark); color: white; padding: 5px 10px; font-size: 0.75rem;">History</a>
-
                             {% if is_owner %}
                                 <a href="{% url 'quiz-detail' stat.quiz__id %}" class="btn btn-gold" style="padding: 5px 10px; font-size: 0.75rem;">Retake</a>
                             {% endif %}
-
-
-
-                            
                         </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 30px; color: #888;">You haven't taken any quizzes yet.</td>
+                    <td colspan="7" style="text-align: center; padding: 30px; color: #888;">No quiz data available yet.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -93,11 +81,15 @@
         <div class="table-responsive">
             <table class="table" style="font-size: 0.9rem; margin-bottom: 0;">
                 <tbody>
-                    {% for attempt in recent_attempts|slice:":5" %}
+                    {% for attempt in recent_attempts_list %}
                     <tr style="border-bottom: 1px solid #eee;">
                         <td style="color: #666; width: 150px;">{{ attempt.completed_at|date:"M d, Y" }}</td>
                         <td>Attempted <strong>{{ attempt.quiz.title }}</strong></td>
-                        <td style="font-weight: bold; color: var(--primary); text-align: right;">{{ attempt.score }}%</td>
+                        <td style="font-weight: bold; color: var(--primary); text-align: right;">{{ attempt.score|floatformat:0 }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" style="text-align: center; padding: 20px; color: #888;">No recent activity.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

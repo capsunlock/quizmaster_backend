@@ -170,38 +170,61 @@ def teacher_dashboard(request):
 
 @login_required
 def student_dashboard(request):
-    # Check if a specific student_id was passed (Teacher view)
     target_user_id = request.GET.get('student_id')
     
     if target_user_id and request.user.is_teacher:
-        # Teacher is viewing a student's dashboard
         from django.contrib.auth import get_user_model
         User = get_user_model()
         display_user = get_object_or_404(User, id=target_user_id)
         is_owner = False
     else:
-        # Student is viewing their own dashboard
         display_user = request.user
         is_owner = True
 
-    quiz_stats = Attempt.objects.filter(student=display_user, completed_at__isnull=False).values(
+    # 1. Define the Subquery correctly (Remove the slice from here)
+    # We move the .values() and [:1] logic into the Subquery wrapper below
+    latest_score_qs = Attempt.objects.filter(
+        student=display_user,
+        quiz_id=OuterRef('quiz_id'),
+        completed_at__isnull=False
+    ).order_by('-completed_at')
+
+    # 2. Main stats query
+    quiz_stats = Attempt.objects.filter(
+        student=display_user, 
+        completed_at__isnull=False
+    ).values(
         'quiz__title', 'quiz__id'
     ).annotate(
         highest=Max('score'),
         lowest=Min('score'),
         average=Avg('score'),
         total_tries=Count('id'),
-        last_date=Max('completed_at')
+        last_date=Max('completed_at'),
+        # Wrap the queryset here and apply the slice/values INSIDE the Subquery call
+        latest_score=Subquery(latest_score_qs.values('score')[:1])
     ).order_by('-last_date')
 
-    recent_attempts = Attempt.objects.filter(student=display_user, completed_at__isnull=False).order_by('-completed_at')
-    global_stats = recent_attempts.aggregate(overall_avg=Avg('score'), total_count=Count('id'))
+    # 3. List for the bottom table
+    recent_attempts_list = Attempt.objects.filter(
+        student=display_user, 
+        completed_at__isnull=False
+    ).order_by('-completed_at')[:5]
+
+    # 4. Global Stats
+    global_stats = Attempt.objects.filter(
+        student=display_user, 
+        completed_at__isnull=False
+    ).aggregate(
+        overall_avg=Avg('score'), 
+        total_count=Count('id')
+    )
 
     return render(request, 'quizzes/student_dashboard.html', {
         'display_user': display_user,
         'is_owner': is_owner,
         'quiz_stats': quiz_stats,
-        'recent_attempts': recent_attempts,
+        'recent_attempts_list': recent_attempts_list,
         'global_student_avg': round(global_stats['overall_avg'] or 0, 1),
         'total_attempts_count': global_stats['total_count'],
         'total_quizzes_count': quiz_stats.count(),
